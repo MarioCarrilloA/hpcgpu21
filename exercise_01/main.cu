@@ -37,23 +37,6 @@ void init(T2 *A) {
 }
 
 
-// GPU Kernel with doubles
-__global__ void foo2(double *A, int niters) {
-    int tid=threadIdx.x;
-    double val;
-
-    val = A[tid];
-    for (int iter=0; iter < niters; iter++) {
-        val = (sqrt(pow(val, 2)) + 5.0) - 101.0;
-        val = (val / 3.0) + 102.0;
-        val = (val + 1.07) - 103.0;
-        val = (val / 1.037) + 104.0;
-        val = (val + 3.00) - 105.0;
-        val = (val / 0.22) + 106.0;
-    }
-    A[tid] = val;
-}
-
 // GPU Kernel with floats
 __global__ void foo1(float *A, int niters) {
     int tid=threadIdx.x;
@@ -67,6 +50,24 @@ __global__ void foo1(float *A, int niters) {
         val = (val / 1.037f) + 104.0f;
         val = (val + 3.00f) - 105.0f;
         val = (val / 0.22f) + 106.0f;
+    }
+    A[tid] = val;
+}
+
+
+// GPU Kernel with doubles
+__global__ void foo2(double *A, int niters) {
+    int tid=threadIdx.x;
+    double val;
+
+    val = A[tid];
+    for (int iter=0; iter < niters; iter++) {
+        val = (sqrt(pow(val, 2)) + 5.0) - 101.0;
+        val = (val / 3.0) + 102.0;
+        val = (val + 1.07) - 103.0;
+        val = (val / 1.037) + 104.0;
+        val = (val + 3.00) - 105.0;
+        val = (val / 0.22) + 106.0;
     }
     A[tid] = val;
 }
