@@ -169,7 +169,7 @@ int exercise01(int functid, int niters) {
 
 int main(int argc, char **argv) {
     int opt;
-    int functid = 0;
+    int functid = 1;
     int niters = DEFAULT_NUM_ITERATIONS;
 
     while ((opt = getopt(argc, argv, "f:n:h")) != EOF) {
@@ -184,15 +184,18 @@ int main(int argc, char **argv) {
                 break;
             case 'h':
                 cout << help << endl;
-                break;
+                return 0;
             case '?':
-                cerr <<  "error: unknown option" << endl;
+                cerr << "error: unknown option" << endl;
+                cout << help << endl;
+                return 1;
             default:
                 cerr << help << endl;
                 return 1;
         }
     }
 
+    cout << "Function: " << functid << "  Iterations number: " << niters << endl;
     exercise01(functid, niters);
 
     return 0;
