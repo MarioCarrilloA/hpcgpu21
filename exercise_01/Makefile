@@ -9,4 +9,7 @@ TARGET = exercise0$(EXERCISE_NUM)
 SOURCES = main.cu
 
 all:
+	$(NVCC) $(CUDAFLAGS) $(LDFLAGS) $(LDLIBS) $(SOURCES) -o $(TARGET)
+
+fast-math:
 	$(NVCC) --use_fast_math $(CUDAFLAGS) $(LDFLAGS) $(LDLIBS) $(SOURCES) -o $(TARGET)
