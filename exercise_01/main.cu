@@ -108,8 +108,42 @@ void foo4(double *A, int niters) {
 }
 
 
+// GPU Kernel with floats / fabs instead of sqrt, pow
+__global__ void foo5(float *A, int niters) {
+    int tid=threadIdx.x;
+    float val;
+
+    val = A[tid];
+    for (int iter=0; iter < niters; iter++) {
+        val = (fabs(val) + 5.0f) - 101.0f;
+        val = (val / 3.0f) + 102.0f;
+        val = (val + 1.07f) - 103.0f;
+        val = (val / 1.037f) + 104.0f;
+        val = (val + 3.00f) - 105.0f;
+        val = (val / 0.22f) + 106.0f;
+    }
+    A[tid] = val;
+}
+
+// GPU Kernel with doubles / fabs instead of sqrt, pow
+__global__ void foo6(double *A, int niters) {
+    int tid=threadIdx.x;
+    double val;
+
+    val = A[tid];
+    for (int iter=0; iter < niters; iter++) {
+        val = (fabs(val) + 5.0) - 101.0;
+        val = (val / 3.0) + 102.0;
+        val = (val + 1.07) - 103.0;
+        val = (val / 1.037) + 104.0;
+        val = (val + 3.00) - 105.0;
+        val = (val / 0.22) + 106.0;
+    }
+    A[tid] = val;
+}
+
 int exercise01(int functid, int niters) {
-    if (functid < 1 || functid > 4)
+    if (functid < 1 || functid > 6)
         return 1;
 
     switch(functid) {
@@ -161,6 +195,36 @@ int exercise01(int functid, int niters) {
             Print(A4);
             foo4(A4, niters);
             Print(A4);
+            break;
+        case 5:
+            float *A5;
+            float *dev_A5;
+            // Allocate memory in host
+            A5 = (float *)malloc(sizeof(float) * N);
+            init(A5);
+            Print(A5);
+            // Allocate memory in device (GPU)
+            cudaMalloc((void **)&dev_A5, sizeof(float) * N);
+            cudaMemcpy(dev_A5, A5, sizeof(float) * N, cudaMemcpyHostToDevice);
+            // Execute GPU code
+            foo5 <<< 1, N >>>(dev_A5, niters);
+            // Get info back
+            cudaMemcpy(A5, dev_A5, sizeof(float) * N, cudaMemcpyDeviceToHost);
+            Print(A5);
+            cudaFree(dev_A5);
+            break;
+        case 6:
+            double *A6;
+            double *dev_A6;
+            A6 = (double *)malloc(sizeof(double) * N);
+            init(A6);
+            Print(A6);
+            cudaMalloc((void **)&dev_A6, sizeof(double) * N);
+            cudaMemcpy(dev_A6, A6, sizeof(double) * N, cudaMemcpyHostToDevice);
+            foo6 <<< 1, N >>>(dev_A6, niters);
+            cudaMemcpy(A6, dev_A6, sizeof(double) * N, cudaMemcpyDeviceToHost);
+            Print(A6);
+            cudaFree(dev_A6);
             break;
     }
     return 0;
