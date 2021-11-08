@@ -23,7 +23,6 @@ template <class T>
 void Print(T *A) {
     int i;
 
-    //cout << "Index" << set(5) left << "Result" << left << endl;
     for (i = 0; i < N; i++)
         cout << i <<  "\t"  << A[i] << endl;
 }
@@ -150,16 +149,11 @@ int exercise01(int functid, int niters) {
         case 1:
             float *A1;
             float *dev_A1;
-            // Allocate memory in host
             A1 = (float *)malloc(sizeof(float) * N);
             init(A1);
-            Print(A1);
-            // Allocate memory in device (GPU)
             cudaMalloc((void **)&dev_A1, sizeof(float) * N);
             cudaMemcpy(dev_A1, A1, sizeof(float) * N, cudaMemcpyHostToDevice);
-            // Execute GPU code
             foo1 <<< 1, N >>>(dev_A1, niters);
-            // Get info back
             cudaMemcpy(A1, dev_A1, sizeof(float) * N, cudaMemcpyDeviceToHost);
             Print(A1);
             cudaFree(dev_A1);
@@ -171,7 +165,6 @@ int exercise01(int functid, int niters) {
             double *dev_A2;
             A2 = (double *)malloc(sizeof(double) * N);
             init(A2);
-            Print(A2);
             cudaMalloc((void **)&dev_A2, sizeof(double) * N);
             cudaMemcpy(dev_A2, A2, sizeof(double) * N, cudaMemcpyHostToDevice);
             foo2 <<< 1, N >>>(dev_A2, niters);
@@ -185,7 +178,6 @@ int exercise01(int functid, int niters) {
             float *A3;
             A3 = (float *)malloc(sizeof(float) * N);
             init(A3);
-            Print(A3);
             foo3(A3, niters);
             Print(A3);
             free(A3);
@@ -195,35 +187,30 @@ int exercise01(int functid, int niters) {
             double *A4;
             A4 = (double *)malloc(sizeof(double) * N);
             init(A4);
-            Print(A4);
             foo4(A4, niters);
             Print(A4);
             free(A4);
             break;
+
         case 5:
             float *A5;
             float *dev_A5;
-            // Allocate memory in host
             A5 = (float *)malloc(sizeof(float) * N);
             init(A5);
-            Print(A5);
-            // Allocate memory in device (GPU)
             cudaMalloc((void **)&dev_A5, sizeof(float) * N);
             cudaMemcpy(dev_A5, A5, sizeof(float) * N, cudaMemcpyHostToDevice);
-            // Execute GPU code
             foo5 <<< 1, N >>>(dev_A5, niters);
-            // Get info back
             cudaMemcpy(A5, dev_A5, sizeof(float) * N, cudaMemcpyDeviceToHost);
             Print(A5);
             cudaFree(dev_A5);
             free(A5);
             break;
+
         case 6:
             double *A6;
             double *dev_A6;
             A6 = (double *)malloc(sizeof(double) * N);
             init(A6);
-            Print(A6);
             cudaMalloc((void **)&dev_A6, sizeof(double) * N);
             cudaMemcpy(dev_A6, A6, sizeof(double) * N, cudaMemcpyHostToDevice);
             foo6 <<< 1, N >>>(dev_A6, niters);
@@ -245,11 +232,9 @@ int main(int argc, char **argv) {
     while ((opt = getopt(argc, argv, "f:n:h")) != EOF) {
         switch (opt) {
             case 'f':
-                cout << "Function: " << optarg << endl;
                 functid = atoi(optarg);
                 break;
             case 'n':
-                cout << "N iterations:" << optarg << endl;
                 niters = atoi(optarg);
                 break;
             case 'h':
