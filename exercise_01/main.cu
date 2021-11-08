@@ -163,6 +163,7 @@ int exercise01(int functid, int niters) {
             cudaMemcpy(A1, dev_A1, sizeof(float) * N, cudaMemcpyDeviceToHost);
             Print(A1);
             cudaFree(dev_A1);
+            free(A1);
             break;
 
         case 2:
@@ -177,6 +178,7 @@ int exercise01(int functid, int niters) {
             cudaMemcpy(A2, dev_A2, sizeof(double) * N, cudaMemcpyDeviceToHost);
             Print(A2);
             cudaFree(dev_A2);
+            free(A2);
             break;
 
         case 3:
@@ -186,6 +188,7 @@ int exercise01(int functid, int niters) {
             Print(A3);
             foo3(A3, niters);
             Print(A3);
+            free(A3);
             break;
 
         case 4:
@@ -195,6 +198,7 @@ int exercise01(int functid, int niters) {
             Print(A4);
             foo4(A4, niters);
             Print(A4);
+            free(A4);
             break;
         case 5:
             float *A5;
@@ -212,6 +216,7 @@ int exercise01(int functid, int niters) {
             cudaMemcpy(A5, dev_A5, sizeof(float) * N, cudaMemcpyDeviceToHost);
             Print(A5);
             cudaFree(dev_A5);
+            free(A5);
             break;
         case 6:
             double *A6;
@@ -225,6 +230,7 @@ int exercise01(int functid, int niters) {
             cudaMemcpy(A6, dev_A6, sizeof(double) * N, cudaMemcpyDeviceToHost);
             Print(A6);
             cudaFree(dev_A6);
+            free(A6);
             break;
     }
     return 0;
