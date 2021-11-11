@@ -42,16 +42,18 @@ __global__ void foo1(float *A, int niters) {
     int tid=threadIdx.x;
     float val;
 
-    val = A[tid];
-    for (int iter=0; iter < niters; iter++) {
-        val = (sqrtf(powf(val, 2)) + 5.0f) - 101.0f;
-        val = (val / 3.0f) + 102.0f;
-        val = (val + 1.07f) - 103.0f;
-        val = (val / 1.037f) + 104.0f;
-        val = (val + 3.00f) - 105.0f;
-        val = (val / 0.22f) + 106.0f;
+    if (tid < N) {
+        val = A[tid];
+        for (int iter=0; iter < niters; iter++) {
+            val = (sqrtf(powf(val, 2)) + 5.0f) - 101.0f;
+            val = (val / 3.0f) + 102.0f;
+            val = (val + 1.07f) - 103.0f;
+            val = (val / 1.037f) + 104.0f;
+            val = (val + 3.00f) - 105.0f;
+            val = (val / 0.22f) + 106.0f;
+        }
+        A[tid] = val;
     }
-    A[tid] = val;
 }
 
 
@@ -60,16 +62,18 @@ __global__ void foo2(double *A, int niters) {
     int tid=threadIdx.x;
     double val;
 
-    val = A[tid];
-    for (int iter=0; iter < niters; iter++) {
-        val = (sqrt(pow(val, 2)) + 5.0) - 101.0;
-        val = (val / 3.0) + 102.0;
-        val = (val + 1.07) - 103.0;
-        val = (val / 1.037) + 104.0;
-        val = (val + 3.00) - 105.0;
-        val = (val / 0.22) + 106.0;
+    if (tid < N) {
+        val = A[tid];
+        for (int iter=0; iter < niters; iter++) {
+            val = (sqrt(pow(val, 2)) + 5.0) - 101.0;
+            val = (val / 3.0) + 102.0;
+            val = (val + 1.07) - 103.0;
+            val = (val / 1.037) + 104.0;
+            val = (val + 3.00) - 105.0;
+            val = (val / 0.22) + 106.0;
+        }
+        A[tid] = val;
     }
-    A[tid] = val;
 }
 
 // CPU host with floats
@@ -113,16 +117,18 @@ __global__ void foo5(float *A, int niters) {
     int tid=threadIdx.x;
     float val;
 
-    val = A[tid];
-    for (int iter=0; iter < niters; iter++) {
-        val = (fabs(val) + 5.0f) - 101.0f;
-        val = (val / 3.0f) + 102.0f;
-        val = (val + 1.07f) - 103.0f;
-        val = (val / 1.037f) + 104.0f;
-        val = (val + 3.00f) - 105.0f;
-        val = (val / 0.22f) + 106.0f;
+    if (tid < N) {
+        val = A[tid];
+        for (int iter=0; iter < niters; iter++) {
+            val = (fabs(val) + 5.0f) - 101.0f;
+            val = (val / 3.0f) + 102.0f;
+            val = (val + 1.07f) - 103.0f;
+            val = (val / 1.037f) + 104.0f;
+            val = (val + 3.00f) - 105.0f;
+            val = (val / 0.22f) + 106.0f;
+        }
+        A[tid] = val;
     }
-    A[tid] = val;
 }
 
 // GPU Kernel with doubles / fabs instead of sqrt, pow
@@ -130,16 +136,18 @@ __global__ void foo6(double *A, int niters) {
     int tid=threadIdx.x;
     double val;
 
-    val = A[tid];
-    for (int iter=0; iter < niters; iter++) {
-        val = (fabs(val) + 5.0) - 101.0;
-        val = (val / 3.0) + 102.0;
-        val = (val + 1.07) - 103.0;
-        val = (val / 1.037) + 104.0;
-        val = (val + 3.00) - 105.0;
-        val = (val / 0.22) + 106.0;
+    if (tid < N) {
+        val = A[tid];
+        for (int iter=0; iter < niters; iter++) {
+            val = (fabs(val) + 5.0) - 101.0;
+            val = (val / 3.0) + 102.0;
+            val = (val + 1.07) - 103.0;
+            val = (val / 1.037) + 104.0;
+            val = (val + 3.00) - 105.0;
+            val = (val / 0.22) + 106.0;
+        }
+        A[tid] = val;
     }
-    A[tid] = val;
 }
 
 int exercise01(int functid, int niters) {
