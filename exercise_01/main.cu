@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <math.h>
 #include <unistd.h>
+#include <helper_cuda.h>
 
 #define N 32
 #define DEFAULT_NUM_ITERATIONS 1
@@ -151,12 +152,12 @@ int exercise01(int functid, int niters) {
             float *dev_A1;
             A1 = (float *)malloc(sizeof(float) * N);
             init(A1);
-            cudaMalloc((void **)&dev_A1, sizeof(float) * N);
-            cudaMemcpy(dev_A1, A1, sizeof(float) * N, cudaMemcpyHostToDevice);
+            checkCudaErrors(cudaMalloc((void **)&dev_A1, sizeof(float) * N));
+            checkCudaErrors(cudaMemcpy(dev_A1, A1, sizeof(float) * N, cudaMemcpyHostToDevice));
             foo1 <<< 1, N >>>(dev_A1, niters);
-            cudaMemcpy(A1, dev_A1, sizeof(float) * N, cudaMemcpyDeviceToHost);
+            checkCudaErrors(cudaMemcpy(A1, dev_A1, sizeof(float) * N, cudaMemcpyDeviceToHost));
             Print(A1);
-            cudaFree(dev_A1);
+            checkCudaErrors(cudaFree(dev_A1));
             free(A1);
             break;
 
@@ -165,12 +166,12 @@ int exercise01(int functid, int niters) {
             double *dev_A2;
             A2 = (double *)malloc(sizeof(double) * N);
             init(A2);
-            cudaMalloc((void **)&dev_A2, sizeof(double) * N);
-            cudaMemcpy(dev_A2, A2, sizeof(double) * N, cudaMemcpyHostToDevice);
+            checkCudaErrors(cudaMalloc((void **)&dev_A2, sizeof(double) * N));
+            checkCudaErrors(cudaMemcpy(dev_A2, A2, sizeof(double) * N, cudaMemcpyHostToDevice));
             foo2 <<< 1, N >>>(dev_A2, niters);
-            cudaMemcpy(A2, dev_A2, sizeof(double) * N, cudaMemcpyDeviceToHost);
+            checkCudaErrors(cudaMemcpy(A2, dev_A2, sizeof(double) * N, cudaMemcpyDeviceToHost));
             Print(A2);
-            cudaFree(dev_A2);
+            checkCudaErrors(cudaFree(dev_A2));
             free(A2);
             break;
 
@@ -197,12 +198,12 @@ int exercise01(int functid, int niters) {
             float *dev_A5;
             A5 = (float *)malloc(sizeof(float) * N);
             init(A5);
-            cudaMalloc((void **)&dev_A5, sizeof(float) * N);
-            cudaMemcpy(dev_A5, A5, sizeof(float) * N, cudaMemcpyHostToDevice);
+            checkCudaErrors(cudaMalloc((void **)&dev_A5, sizeof(float) * N));
+            checkCudaErrors(cudaMemcpy(dev_A5, A5, sizeof(float) * N, cudaMemcpyHostToDevice));
             foo5 <<< 1, N >>>(dev_A5, niters);
-            cudaMemcpy(A5, dev_A5, sizeof(float) * N, cudaMemcpyDeviceToHost);
+            checkCudaErrors(cudaMemcpy(A5, dev_A5, sizeof(float) * N, cudaMemcpyDeviceToHost));
             Print(A5);
-            cudaFree(dev_A5);
+            checkCudaErrors(cudaFree(dev_A5));
             free(A5);
             break;
 
@@ -211,12 +212,12 @@ int exercise01(int functid, int niters) {
             double *dev_A6;
             A6 = (double *)malloc(sizeof(double) * N);
             init(A6);
-            cudaMalloc((void **)&dev_A6, sizeof(double) * N);
-            cudaMemcpy(dev_A6, A6, sizeof(double) * N, cudaMemcpyHostToDevice);
+            checkCudaErrors(cudaMalloc((void **)&dev_A6, sizeof(double) * N));
+            checkCudaErrors(cudaMemcpy(dev_A6, A6, sizeof(double) * N, cudaMemcpyHostToDevice));
             foo6 <<< 1, N >>>(dev_A6, niters);
-            cudaMemcpy(A6, dev_A6, sizeof(double) * N, cudaMemcpyDeviceToHost);
+            checkCudaErrors(cudaMemcpy(A6, dev_A6, sizeof(double) * N, cudaMemcpyDeviceToHost));
             Print(A6);
-            cudaFree(dev_A6);
+            checkCudaErrors(cudaFree(dev_A6));
             free(A6);
             break;
     }
