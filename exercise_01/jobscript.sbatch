@@ -2,6 +2,7 @@
 
 #SBATCH -J ExerciseJob
 #SBATCH -N 1
+#SBATCH -n 1
 #SBATCH --gres=gpu:K20m:1
 #SBATCH -o ExerciseJob-%j.out
 #SBATCH -e ExerciseJob-%j.err
