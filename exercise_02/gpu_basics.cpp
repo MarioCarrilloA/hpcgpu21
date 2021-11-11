@@ -74,37 +74,41 @@ int GPU_initialize() {
         dP->peakmemBW = (float)deviceProp.memoryClockRate*deviceProp.memoryBusWidth*0.25e-6;
         dP->maxGridSize = deviceProp.maxGridSize[0];
 
-/*       cudaDriverGetVersion(&driverversion);
- *      cudaRuntimeGetVersion(&runtimeversion);
- *       printf("  cuda driver version / runtime version          %d.%d / %d.%d\n", 
- *              driverversion/1000, (driverversion%100)/10, runtimeversion/1000, 
- *              (runtimeversion%100)/10);
- *       printf("  cuda capability major/minor version number:    %d.%d\n", 
- *               deviceProp.major, deviceProp.minor);
- *              (float)deviceProp.totalGlobalMem/1048576.0f, 
- *               (unsigned long long) deviceProp.totalGlobalMem);
- *      sprintf(msg, "  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n",
- *      printf("%s", msg);
- *      printf("  (%2d) Multiprocessors, (%3d) CUDA Cores/MP:     %d CUDA Cores\n",
- *             deviceProp.multiProcessorCount,
- *             _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor),
- *             _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) * 
- *             deviceProp.multiProcessorCount);
- *      printf("  GPU Max Clock rate:                            %.0f MHz (%0.2f GHz)\n", deviceProp.clockRate * 1e-3f, deviceProp.clockRate * 1e-6f);
-#if CUDART_VERSION >= 5000
-*printf("  Memory Clock rate:                             %.0f Mhz\n", deviceProp.memoryClockRate * 1e-3f);
-*       printf("  Memory Bus Width:                              %d-bit\n",   deviceProp.memoryBusWidth);
+       cudaDriverGetVersion(&driverversion);
+      cudaRuntimeGetVersion(&runtimeversion);
+       printf("  cuda driver version / runtime version          %d.%d / %d.%d\n", 
+              driverversion/1000, (driverversion%100)/10, runtimeversion/1000, 
+              (runtimeversion%100)/10);
+       printf("  cuda capability major/minor version number:    %d.%d\n", 
+               deviceProp.major, deviceProp.minor);
+              //(float)deviceProp.totalGlobalMem/1048576.0f, 
+               //(unsigned long long) deviceProp.totalGlobalMem);
+      //sprintf(msg, "  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n",
+      sprintf(msg, "  Total amount of global memory:                 %.0f MBytes (%llu bytes)\n",
+            (float)deviceProp.totalGlobalMem/1048576.0f, 
+               (unsigned long long) deviceProp.totalGlobalMem);
 
-*       if (deviceProp.l2CacheSize)
-*       {
-*           printf("  L2 Cache Size:                                 %d bytes\n", deviceProp.l2CacheSize);
-*       }
+      printf("%s", msg);
+      printf("  (%2d) Multiprocessors, (%3d) CUDA Cores/MP:     %d CUDA Cores\n",
+             deviceProp.multiProcessorCount,
+             _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor),
+             _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) * 
+             deviceProp.multiProcessorCount);
+      printf("  GPU Max Clock rate:                            %.0f MHz (%0.2f GHz)\n", deviceProp.clockRate * 1e-3f, deviceProp.clockRate * 1e-6f);
+#if CUDART_VERSION >= 5000
+printf("  Memory Clock rate:                             %.0f Mhz\n", deviceProp.memoryClockRate * 1e-3f);
+       printf("  Memory Bus Width:                              %d-bit\n",   deviceProp.memoryBusWidth);
+
+       if (deviceProp.l2CacheSize)
+       {
+           printf("  L2 Cache Size:                                 %d bytes\n", deviceProp.l2CacheSize);
+       }
 
 #else
-*       printf(" Installation is pretty old. Install a new one to get full support \n");
-*       return(EXIT_FAILURE);
+       printf(" Installation is pretty old. Install a new one to get full support \n");
+       return(EXIT_FAILURE);
 #endif
-*printf("  Total amount of shared memory per block:       %lu bytes\n", deviceProp.sharedMemPerBlock);
+printf("  Total amount of shared memory per block:       %lu bytes\n", deviceProp.sharedMemPerBlock);
         printf("  Total number of registers available per block: %d\n", deviceProp.regsPerBlock);
         printf("  Warp size:                                     %d\n", deviceProp.warpSize);
         printf("  Maximum number of threads per multiprocessor:  %d\n", deviceProp.maxThreadsPerMultiProcessor);
@@ -135,7 +139,7 @@ int GPU_initialize() {
         };
         printf("  Compute Mode:\n");
         printf("     < %s >\n", sComputeMode[deviceProp.computeMode]);
- */
+
     }
  
 }
