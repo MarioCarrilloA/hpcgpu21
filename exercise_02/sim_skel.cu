@@ -2,7 +2,19 @@
 #include <helper_cuda.h>
  
 __global__ void kernel(uchar3 *pos,int width, int height) {
-	// Implement the kernel here
+    // Implement the kernel here
+    int t = threadIdx.x;
+    int g = blockIdx.x;
+    int i = t + g * blockDim.x;
+    int off = gridDim.x * blockDim.x;
+    int N = width * height;
+
+    while(i < N) {
+        pos[i].x=255;
+        pos[i].y=0;
+        pos[i].z=0;
+        i+=off;
+    }
 }
 void simulate(uchar3 *ptr, int tick, int w, int h)
 {
