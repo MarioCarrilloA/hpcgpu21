@@ -1,18 +1,28 @@
 # Exercise 2
+
 ## General Properties
+
 ### HOWTO
 
-We can build a binary that help us to get GPU information and execute it with
-`sbatch`
+We can build and execute binary that help us to get GPU information with the
+next instructions and execute
 
 ```
+./access_to_node.sh
 make extras
+./DevProperties
+```
+
+or we can do it with `sbatch`
+
+```
 sbatch collect_devinfo.sbatch
 ```
 
-Now, we can calculate then the total number of registers of the GPU or the
+
+Now, we can calculate then the **total** number of registers of the GPU and the
 number of `float`s that can be fit in shared memory by interpreting the output.
-For example, below the output for a **Tesla K20m** GPU.
+For example, below some lines from the output about a **Tesla K20m** GPU.
 
 ```
 Total amount of shared memory per block:       49152 bytes
@@ -29,8 +39,8 @@ per multiprocessor**.
 Also, the output tells us the *Total number of registers available per block*,
 so if we have 2 blocks, then we have **131072 registers per multiprocessor**.
 
-Finally, As we hace 13 *Multiprocessors*, then we have **13 x 131072 = 1703936** registers.
-If we compare this for example with [Zen 2 - Microarchitectures - AMD][amd]
+Finally, As we have 13 *Multiprocessors*, then we have **13 x 131072 = 1703936**
+registers. If we compare this for example with [Zen 2 - Microarchitectures - AMD][amd]
 has a much smaller number of registers, **180** according to the documentation.
 
 In addition, the number of floats that can fit in *shared memory* is:
