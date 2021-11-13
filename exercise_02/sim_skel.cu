@@ -10,9 +10,18 @@ __global__ void kernel(uchar3 *pos,int width, int height) {
     int N = width * height;
 
     while(i < N) {
-        pos[i].x=255;
-        pos[i].y=0;
-        pos[i].z=0;
+		int currentWid = i % width;
+		int currentHei = i / width;
+		if(currentWid * currentWid + currentHei * currentHei <= width * height){
+			pos[i].x=0;
+        	pos[i].y=0;
+        	pos[i].z=255;
+		}
+		else{
+			pos[i].x=255;
+        	pos[i].y=0;
+        	pos[i].z=0;
+		}
         i+=off;
     }
 }
