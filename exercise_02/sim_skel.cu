@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <helper_cuda.h>
  
-__global__ void kernel(uchar3 *pos,int width, int height) {
+__global__ void kernel(uchar3 *pos,int width, int height, int tick) {
     // Implement the kernel here
     int t = threadIdx.x;
     int g = blockIdx.x;
@@ -22,8 +22,20 @@ __global__ void kernel(uchar3 *pos,int width, int height) {
         	pos[i].y=0;
         	pos[i].z=0;
 		}
+
+		int checker = (currentWid / 32 + currentHei / 32) % 2;
+		if(tick % 2 == 0){
+			checker = 1 - checker;
+		}
+
+		if(checker == 0){
+			pos[i].x=0;
+        	pos[i].y=255;
+        	pos[i].z=0;
+		}
         i+=off;
     }
+	
 }
 void simulate(uchar3 *ptr, int tick, int w, int h)
 {
@@ -34,7 +46,7 @@ void simulate(uchar3 *ptr, int tick, int w, int h)
 	dim3 threads(1,1,1);
 
 	// call your kernel
-	kernel<<< block,threads>>> (ptr,w,h);
+	kernel<<< block,threads>>> (ptr,w,h, tick);
 	err=cudaGetLastError();
 	if(err!=cudaSuccess) {
 		fprintf(stderr,"Error executing the kernel - %s\n",
