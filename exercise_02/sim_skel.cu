@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <helper_cuda.h>
+#define PI 3.1416
  
 __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
     // Implement the kernel here
@@ -30,12 +31,22 @@ __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
 
 		if(checker == 0){
 			pos[i].x=0;
-        	pos[i].y=255;
+        	pos[i].y=204;
         	pos[i].z=0;
 		}
+
+        double degree = (currentWid * 360.0) / 800.0;
+        double radians = degree * (PI/180.0);
+        double amplitude = sin(radians);
+        int pixely = 200 + ((amplitude + 1) * 400) / 2;
+        if (pixely == currentHei) {
+            pos[i].x=255;
+            pos[i].y=255;
+            pos[i].z=0;
+        }
+
         i+=off;
     }
-	
 }
 void simulate(uchar3 *ptr, int tick, int w, int h)
 {
