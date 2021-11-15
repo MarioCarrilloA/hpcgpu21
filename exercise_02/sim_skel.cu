@@ -30,13 +30,13 @@ __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
 		}
 
 		int checker = (currentWid / 32 + currentHei / 32) % 2;
-		if (tick % 2 == 0){
+		if (tick % 4 < 2){
 			checker = 1 - checker;
 		}
 
 		if(checker == 0){
 			pos[i].x=0;
-        	pos[i].y=204;
+        	pos[i].y=(tick+150) % 255;
         	pos[i].z=0;
 		}
 
