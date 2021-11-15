@@ -30,7 +30,7 @@ __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
 		}
 
 		int checker = (currentWid / 32 + currentHei / 32) % 2;
-		if (tick % 4 < 2){
+		if (tick % 50 == 0) {
 			checker = 1 - checker;
 		}
 
@@ -72,8 +72,8 @@ void simulate(uchar3 *ptr, int tick, int w, int h)
 	cudaError_t err=cudaSuccess;
 
 	// set number of threads/blocks
-	dim3 block(1,1,1);
-	dim3 threads(1,1,1);
+	dim3 block(4,1,1);
+	dim3 threads(1024,1,1);
 
 	// call your kernel
 	kernel<<< block,threads>>> (ptr,w,h, tick);
