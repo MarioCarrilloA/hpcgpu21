@@ -2,7 +2,7 @@
 
 TITLE="GPU"
 MODULE="nvidia/7.5"
-GPU="Q4000"
+GPU="P2000"
 
 rhrk-launch \
     --title $TITLE \
