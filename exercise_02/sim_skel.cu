@@ -10,7 +10,12 @@ __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
     int off = gridDim.x * blockDim.x;
     int N = width * height;
 
-    while(i < N) {
+    // Values for animated circle
+    int xc = (tick % width) + 50;
+    int yc = 100;
+    int radius = 60;
+
+    while (i < N) {
 		int currentWid = i % width;
 		int currentHei = i / width;
 		if(currentWid * currentWid + currentHei * currentHei <= width * height){
@@ -18,14 +23,14 @@ __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
         	pos[i].y=0;
         	pos[i].z=255;
 		}
-		else{
+		else {
 			pos[i].x=255;
         	pos[i].y=0;
         	pos[i].z=0;
 		}
 
 		int checker = (currentWid / 32 + currentHei / 32) % 2;
-		if(tick % 2 == 0){
+		if (tick % 2 == 0){
 			checker = 1 - checker;
 		}
 
@@ -49,6 +54,14 @@ __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
                 pos[i].y=255;
                 pos[i].z=0;
             }
+        }
+
+        int X = (currentWid - xc);
+        int Y = (currentHei - yc);
+        if (X * X + Y * Y <= radius * radius) {
+            pos[i].x=255;
+            pos[i].y=178;
+            pos[i].z=0;
         }
 
         i+=off;
