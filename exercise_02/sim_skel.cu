@@ -35,14 +35,20 @@ __global__ void kernel(uchar3 *pos,int width, int height, int tick) {
         	pos[i].z=0;
 		}
 
-        double degree = (currentWid * 360.0) / 800.0;
-        double radians = degree * (PI/180.0);
-        double amplitude = sin(radians);
-        int pixely = 200 + ((amplitude + 1) * 400) / 2;
-        if (pixely == currentHei) {
-            pos[i].x=255;
-            pos[i].y=255;
-            pos[i].z=0;
+        // 199 and 601 will be the range of sine amplitude
+        if (currentHei >= 199 && currentHei <= 601) {
+            double degree = (currentWid * 360.0) / 800.0;
+            double radians = degree * (PI/180.0);
+            double amplitude = sin(radians);
+            int pixely = ((amplitude + 1) * 400) / 2;
+            // 199, 200 and 201 are bias values to do our line thicker
+            if (pixely + 199 == currentHei
+                || pixely + 200 == currentHei
+                || pixely + 201 == currentHei ) {
+                pos[i].x=255;
+                pos[i].y=255;
+                pos[i].z=0;
+            }
         }
 
         i+=off;
