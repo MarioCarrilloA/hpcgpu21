@@ -42,5 +42,17 @@ has a much smaller number of registers, **180** according to the documentation.
 In addition, the number of floats that can fit in *shared memory* is:
 **(49152/4) 4 = 3072** per block.
 
+## Build and execute  exercise 02
+
+We just need to follow these instructions:
+
+```
+./access_to_node.sh
+make
+./exercise02
+```
+
+
+
 
 [amd]: https://en.wikichip.org/wiki/amd/microarchitectures/zen_2
