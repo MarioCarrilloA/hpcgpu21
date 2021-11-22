@@ -42,9 +42,9 @@ As in the first part of this document, we tried multiple versions of the NVIDA
 module _(7.5, 8.0, 9.0, 10.0)_. With the exception of the V100 GPU we obtained
 the same results for all versions. The table below describes our results. The
 latency units are **cycles** and for Throughput **(cores/SM)**. In addition, it
-includes the needed numbers of wraps.
+includes the needed numbers of warps.
 
-| GPU   | version | Latency | Throughput | Parallelism | Wraps |
+| GPU   | version | Latency | Throughput | Parallelism | Warps |
 |-------|---------|---------|------------|-------------|-------|
 | K20Xm | ALL     | 100     | 192        | 19200       | 6     |
 | P2000 | ALL     | 100     | 128        | 12800       | 4     |
