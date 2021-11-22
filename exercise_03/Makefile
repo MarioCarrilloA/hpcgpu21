@@ -11,8 +11,7 @@ SOURCESP2 = exercise03_p2.cpp  kernel_p2.cu
 DEVINFO_BIN = DevProperties
 
 all:
-	$(NVCC) $(CUDAFLAGS) $(LDFLAGS) $(LDLIBS) $(SOURCESP1) -o $(TARGET)_p1
-	$(NVCC) $(CUDAFLAGS) $(LDFLAGS) $(LDLIBS) $(SOURCESP2) -o $(TARGET)_p2
+	@echo "Work in progress"
 
 extras:
 	$(NVCC) $(CUDAFLAGS) gpu_basics.cpp -o $(DEVINFO_BIN)
