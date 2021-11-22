@@ -30,8 +30,8 @@ following values we will get **100%** GPU occupancy.
 Therefore we will have **Active Thread Blocks per Multiprocessor: 8** and
 **32 x 256 x 8 = 65536** registers for kernel.
 
-**NOTE:** If we use the **65536** for **1.b) Select Shared Memory Size Config
-(bytes)** in calculator, we will have the same results.
+**NOTE:** If we use the default value **65536** for **1.b) Select Shared Memory
+Size Config (bytes)** in calculator, we will have the same results.
 
 ## 2. Little's Law
 
@@ -78,4 +78,4 @@ sbatch V100_info.sbatch
 ```
 
 [doc1]: https://www.nvidia.com/download/driverResults.aspx/124722/en-us
-[r1]: ./template
+[r1]: ./results
