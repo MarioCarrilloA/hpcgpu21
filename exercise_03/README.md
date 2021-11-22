@@ -10,7 +10,8 @@ version _9.0_ should support it.
 
 However, we decided to try more versions _(7.5, 8.0, 9.0, 10.0)_ to confirm if
 we interpreted the information in the document correctly. The result of this is
-that there was no difference in shared memory.
+that there was no difference in shared memory (the [results][r1] are available
+in this repository).
 All specified, **Total amount of shared memory per block: 49152 bytes (48KB)**.
 And for compute capability, **cuda capability major/minor version number: 7.0**.
 
@@ -29,6 +30,8 @@ following values we will get **100%** GPU occupancy.
 Therefore we will have **Active Thread Blocks per Multiprocessor: 8** and
 **32 x 256 x 8 = 65536** registers for kernel.
 
+**NOTE:** If we use the **65536** for **1.b) Select Shared Memory Size Config
+(bytes)** in calculator, we will have the same results.
 
 ## 2. Little's Law
 
@@ -75,3 +78,4 @@ sbatch V100_info.sbatch
 ```
 
 [doc1]: https://www.nvidia.com/download/driverResults.aspx/124722/en-us
+[r1]: ./template
