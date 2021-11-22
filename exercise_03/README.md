@@ -54,4 +54,24 @@ A thread operates on each core and these **32** threads are grouped to warps.
 To have always one warp available to be active state, the amount of throughput/32
 is needed for each device.
 
+##  Appendix - HOWTO
+
+There are 2 ways to get information about a GPU. We need to use both because
+some only work in interactive mode and for others it is necessary to launch a
+sbatch job. For the case of the **P2000 GPU**.
+
+```
+./access_to_node.sh
+make extras
+./DevProperties
+```
+
+And for **V100** and **K20Xm** we need to use `sbatch`
+
+```
+sbatch K20Xm_info.sbatch
+sbatch V100_info.sbatch
+
+```
+
 [doc1]: https://www.nvidia.com/download/driverResults.aspx/124722/en-us
