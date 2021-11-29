@@ -9,7 +9,7 @@ __global__ void kernel_draw_earth(uchar3 *pos,int width, int height, int tick, E
     int off = gridDim.x * blockDim.x;
     int N = width * height;
 
-	float radians = ((tick / 5) % 360) * (PI / 180);
+	float radians = ((tick / 2) % 360) * (PI / 180);
 	earth->xc = width / 2 + 200 * std::cos(radians);
 	earth->yc  = height / 2 + 200 * std::sin(radians);
 
@@ -81,12 +81,12 @@ __global__ void kernel_draw_particles(uchar3 *pos, int width, int height, p *par
 	}
 }
 
-__global__ void kernel_update_particles_pos(uchar3 *pos, int width, int height, p *particles){
+__global__ void kernel_update_particles_pos(uchar3 *pos, int width, int height, p *particles, Earth *earth){
 	int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
     int off = gridDim.x * blockDim.x;
-    float delta = 0.05;
+    float delta = 0.2;
 
 	while (i < MAX_PARTICLES) {
         // Update particle position 
@@ -97,6 +97,16 @@ __global__ void kernel_update_particles_pos(uchar3 *pos, int width, int height, 
 		particles[i].x = particles[i].x + particles[i].v0 * std::cos(degree);
         particles[i].y = particles[i].y + particles[i].v0 * std::sin(degree);
 
+		// Apply a repulsive force of earth
+		float force = 50 * (GRAVITY / earth->radius);
+		if((earth->xc - earth->radius - force) < particles[i].x && particles[i].x < (earth->xc + earth->radius + force)
+			&& (earth->yc - earth->radius - force) < particles[i].y && particles[i].y < (earth->yc + earth->radius + force)){
+						
+			particles[i].x = earth->xc + (earth->radius + force) * std::cos(degree);
+			particles[i].y = earth->yc + (earth->radius + force) * std::sin(degree);
+		}
+
+		// Update particle color
 		particles[i].red = (particles[i].red + 1) % 256;
 		particles[i].green = (particles[i].green + 1) % 256;
 		particles[i].blue = (particles[i].blue + 1) % 256;
@@ -107,9 +117,9 @@ __global__ void kernel_update_particles_pos(uchar3 *pos, int width, int height, 
             particles[i].y = particles[i].default_y;
             particles[i].v0 = particles[i].default_v0;
 
-			particles[i].red = 150;
-			particles[i].green = 50;
-			particles[i].blue = 100;
+			particles[i].red = 100;
+			particles[i].green = 70;
+			particles[i].blue = 50;
         }
 
         i+=off;
@@ -130,21 +140,23 @@ void simulate_p1(uchar3 *ptr, int tick, int w, int h, p *particles, Earth *earth
 	checkCudaErrors(cudaMalloc((void **)&earth_dev, sizeof(Earth)));
 	checkCudaErrors(cudaMemcpy(earth_dev, earth, sizeof(Earth), cudaMemcpyHostToDevice));
 
-	// Call kernel to draw earth and sun
+	// Call kernel to draw earth
 	kernel_draw_earth<<<block, threads>>> (ptr,w,h,tick,earth_dev);
-	kernel_draw_sun<<< block,threads>>> (ptr,w,h);
-
-	checkCudaErrors(cudaMemcpy(earth, earth_dev, sizeof(Earth), cudaMemcpyDeviceToHost));
-	checkCudaErrors(cudaFree(earth_dev));
 
 	checkCudaErrors(cudaMalloc((void **)&particles_dev, sizeof(p) * MAX_PARTICLES));
 	checkCudaErrors(cudaMemcpy(particles_dev, particles, sizeof(p) * MAX_PARTICLES, cudaMemcpyHostToDevice));
 	
+	// Call kernel to update particle values
+    kernel_update_particles_pos<<<block, threads>>> (ptr, w, h, particles_dev, earth_dev);
+
 	// Call kernel to draw particles
 	kernel_draw_particles<<<block, threads>>> (ptr, w, h, particles_dev);
 
-	// Call kernel to update particle values
-    kernel_update_particles_pos<<<block, threads>>> (ptr, w, h, particles_dev);
+	// Call kernel to draw sun
+	kernel_draw_sun<<< block,threads>>> (ptr,w,h);
+
+	checkCudaErrors(cudaMemcpy(earth, earth_dev, sizeof(Earth), cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaFree(earth_dev));
 	checkCudaErrors(cudaMemcpy(particles, particles_dev, sizeof(p) * MAX_PARTICLES, cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaFree(particles_dev));
 
