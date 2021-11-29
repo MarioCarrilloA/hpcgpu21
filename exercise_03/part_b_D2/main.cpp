@@ -42,9 +42,6 @@ void init(p *particles) {
         particles[i].x = SUN_POS_X + SUN_RADIUS * cos(particles[i].degree);
         particles[i].y = SUN_POS_Y + SUN_RADIUS * sin(particles[i].degree);
         particles[i].mass = (float(rand())/float((RAND_MAX)) * 10.0)+ 0.00001;
-        //particles[i].mass = rand() % 10 + 1; // 1 - 10
-        //particles[i].radius = rand() % 5 + 1; // 1 - 5
-        //particles[i].v0 = (float(rand())/float((RAND_MAX)) * 100.0); // 0 - 100
         particles[i].vx0 = (float(rand())/float((RAND_MAX)) * 100.0); // 0 - 100
         particles[i].vx0 = particles[i].vx0 * cos(particles[i].degree);
         particles[i].vy0 = (float(rand())/float((RAND_MAX)) * 100.0); // 0 - 100

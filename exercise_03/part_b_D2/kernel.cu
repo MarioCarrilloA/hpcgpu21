@@ -15,9 +15,7 @@ __global__ void kernel_draw_background(uchar3 *pos,int width, int height, int ti
 
         int Xs = (currentX - SUN_POS_X);
         int Ys = (currentY - SUN_POS_Y);
-        //int Xe = (currentX - EARTH_POS_X);
         int Xe = (currentX - earth->x);
-        //int Ye = (currentY - EARTH_POS_Y);
         int Ye = (currentY - earth->y);
 
         // Draw sun
@@ -72,10 +70,9 @@ __global__ void kernel_update_particles_pos(uchar3 *pos,int width, int height, p
     float time_step = 0.01;
     float ax = 0.0;
     float ay = 0.0;
-    //double CONST = -0.015;
-    double CONST = 0.015;
+    double CONST = -0.015;
 
-    earth->degree = earth->degree + 0.001;
+    earth->degree = earth->degree + 0.0009;
     earth->x = ORBIT_POS_X + ORBIT_RADIUS * cos(earth->degree);
     earth->y = ORBIT_POS_Y + ORBIT_RADIUS * sin(earth->degree);
 

@@ -13,13 +13,6 @@
 #define ORBIT_POS_Y   400
 #define ORBIT_RADIUS   300
 
-// Earth
-//#define EARTH_MASS    59720000
-//#define EARTH_RADIUS  20
-//#define EARTH_POS_X   600
-//#define EARTH_POS_Y   200
-
-
 struct p {
     int x;
     int y;
