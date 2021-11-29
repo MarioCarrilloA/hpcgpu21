@@ -2,7 +2,7 @@
 #include <helper_cuda.h>
 #include "utils.h"
 
-__global__ void kernel_draw_background(uchar3 *pos,int width, int height, int tick) {
+__global__ void kernel_draw_background(uchar3 *pos,int width, int height, int tick, p *earth) {
 	int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
@@ -15,8 +15,10 @@ __global__ void kernel_draw_background(uchar3 *pos,int width, int height, int ti
 
         int Xs = (currentX - SUN_POS_X);
         int Ys = (currentY - SUN_POS_Y);
-        int Xe = (currentX - EARTH_POS_X);
-        int Ye = (currentY - EARTH_POS_Y);
+        //int Xe = (currentX - EARTH_POS_X);
+        int Xe = (currentX - earth->x);
+        //int Ye = (currentY - EARTH_POS_Y);
+        int Ye = (currentY - earth->y);
 
         // Draw sun
         if (Xs * Xs + Ys * Ys <= SUN_RADIUS * SUN_RADIUS) {
@@ -25,7 +27,7 @@ __global__ void kernel_draw_background(uchar3 *pos,int width, int height, int ti
             pos[i].z=0;
 
         // Draw earth
-        } else if (Xe * Xe + Ye * Ye <= EARTH_RADIUS * EARTH_RADIUS) {
+        } else if (Xe * Xe + Ye * Ye <= earth->radius * earth->radius) {
             pos[i].x=70;
             pos[i].y=130;
             pos[i].z=180;
@@ -62,7 +64,7 @@ __global__ void kernel_draw_sun_particles(uchar3 *pos,int width, int height, p *
 }
 
 
-__global__ void kernel_update_particles_pos(uchar3 *pos,int width, int height, p *particles) {
+__global__ void kernel_update_particles_pos(uchar3 *pos,int width, int height, p *particles, p *earth) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
@@ -70,16 +72,24 @@ __global__ void kernel_update_particles_pos(uchar3 *pos,int width, int height, p
     float time_step = 0.01;
     float ax = 0.0;
     float ay = 0.0;
-    double CONST = -0.015;
+    //double CONST = -0.015;
+    double CONST = 0.015;
+
+    earth->degree = earth->degree + 0.001;
+    earth->x = ORBIT_POS_X + ORBIT_RADIUS * cos(earth->degree);
+    earth->y = ORBIT_POS_Y + ORBIT_RADIUS * sin(earth->degree);
+
+    if (earth->degree > 360.0)
+        earth->degree = 0.0;
 
     while (i < MAX_PARTICLES) {
-        double dx = particles[i].x - EARTH_POS_X;
-        double dy = particles[i].y - EARTH_POS_Y;
+        double dx = abs(particles[i].x - earth->x);
+        double dy = abs(particles[i].y - earth->y);
         double r = sqrt((dx * dx) + (dy * dy));
 
         // Aceleration
-        ax = ((CONST * EARTH_MASS) / (particles[i].mass * r)) * (particles[i].x / r);
-        ay = ((CONST * EARTH_MASS) / (particles[i].mass * r)) * (particles[i].y / r);
+        ax = ((CONST * earth->mass) / (particles[i].mass * r)) * (particles[i].x / r);
+        ay = ((CONST * earth->mass) / (particles[i].mass * r)) * (particles[i].y / r);
 
         particles[i].vx0 = particles[i].vx0 + (ax * time_step);
         particles[i].vy0 = particles[i].vy0 + (ay * time_step);
@@ -99,7 +109,7 @@ __global__ void kernel_update_particles_pos(uchar3 *pos,int width, int height, p
 }
 
 
-void simulate(uchar3 *ptr, int tick, int w, int h, p *particles)
+void simulate(uchar3 *ptr, int tick, int w, int h, p *particles, p *earth)
 {
 	cudaError_t err=cudaSuccess;
 
@@ -108,9 +118,16 @@ void simulate(uchar3 *ptr, int tick, int w, int h, p *particles)
 	dim3 threads(1024,1,1);
 
     p *particles_dev;
+    p *earth_dev;
 
 	// Call kernel to draw sun, earth and color background
-	kernel_draw_background<<<block, threads>>> (ptr, w, h, tick);
+	//
+    checkCudaErrors(cudaMalloc((void **)&earth_dev, sizeof(p)));
+    checkCudaErrors(cudaMemcpy(earth_dev, earth, sizeof(p), cudaMemcpyHostToDevice));
+
+
+
+	kernel_draw_background<<<block, threads>>> (ptr, w, h, tick, earth_dev);
     checkCudaErrors(cudaMalloc((void **)&particles_dev, sizeof(p) * MAX_PARTICLES));
     checkCudaErrors(cudaMemcpy(particles_dev, particles, sizeof(p) * MAX_PARTICLES, cudaMemcpyHostToDevice));
 
@@ -118,7 +135,8 @@ void simulate(uchar3 *ptr, int tick, int w, int h, p *particles)
     kernel_draw_sun_particles<<<block, threads>>> (ptr, w, h, particles_dev);
 
     // Call kernel to update values for the particles
-    kernel_update_particles_pos<<<block, threads>>> (ptr, w, h, particles_dev);
+    kernel_update_particles_pos<<<block, threads>>> (ptr, w, h, particles_dev, earth_dev);
+    checkCudaErrors(cudaMemcpy(earth, earth_dev, sizeof(p), cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaMemcpy(particles, particles_dev, sizeof(p) * MAX_PARTICLES, cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaFree(particles_dev));
 	err=cudaGetLastError();

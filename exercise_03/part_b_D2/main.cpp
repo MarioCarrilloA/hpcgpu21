@@ -29,29 +29,37 @@ uchar3* ptr;
 int dimx,dimy;
 int tick=0,A_ex=0;
 p particles[MAX_PARTICLES];
+p *earth = (p*)malloc(sizeof(p));
 
-void simulate(uchar3* ptr, int tick, int width, int height, p *particles);
+void simulate(uchar3* ptr, int tick, int width, int height, p *particles, p *earth);
 
 
 void init(p *particles) {
     int i;
     srand (time(NULL));
     for (i=0; i < MAX_PARTICLES; i++) {
-        particles[i].angle = (float(rand())/float((RAND_MAX)) * 360.0); // 0 - 360
-        particles[i].x = SUN_POS_X + SUN_RADIUS * cos(particles[i].angle);
-        particles[i].y = SUN_POS_Y + SUN_RADIUS * sin(particles[i].angle);
-        particles[i].mass = rand() % 10 + 1; // 1 - 10
+        particles[i].degree = (float(rand())/float((RAND_MAX)) * 360.0); // 0 - 360
+        particles[i].x = SUN_POS_X + SUN_RADIUS * cos(particles[i].degree);
+        particles[i].y = SUN_POS_Y + SUN_RADIUS * sin(particles[i].degree);
+        particles[i].mass = (float(rand())/float((RAND_MAX)) * 10.0)+ 0.00001;
+        //particles[i].mass = rand() % 10 + 1; // 1 - 10
         //particles[i].radius = rand() % 5 + 1; // 1 - 5
         //particles[i].v0 = (float(rand())/float((RAND_MAX)) * 100.0); // 0 - 100
         particles[i].vx0 = (float(rand())/float((RAND_MAX)) * 100.0); // 0 - 100
-        particles[i].vx0 = particles[i].vx0 * cos(particles[i].angle);
+        particles[i].vx0 = particles[i].vx0 * cos(particles[i].degree);
         particles[i].vy0 = (float(rand())/float((RAND_MAX)) * 100.0); // 0 - 100
-        particles[i].vy0 = particles[i].vy0 * sin(particles[i].angle);
+        particles[i].vy0 = particles[i].vy0 * sin(particles[i].degree);
         particles[i].default_y = particles[i].y;
         particles[i].default_x = particles[i].x;
         particles[i].default_vx0 = particles[i].vx0;
         particles[i].default_vy0 = particles[i].vy0;
     }
+
+    earth->degree = 0.0;
+    earth->mass = 59720000;
+    earth->radius = 20;
+    earth->x = ORBIT_POS_X + ORBIT_RADIUS * cos(earth->degree);
+    earth->y = ORBIT_POS_Y + ORBIT_RADIUS * sin(earth->degree);
 }
 
 
@@ -70,6 +78,7 @@ void key( unsigned char key, int x, int y )
             checkCudaErrors(cudaGraphicsUnregisterResource(resource));
 	    glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
             glDeleteBuffersARB(1, &vbo);
+            free(earth);
             exit(0);
     }
 }
@@ -82,7 +91,7 @@ void display()
 	printf("%d ist size bei %d \n",size,dimx*dimy);
 
 	// Execute the CUDA kernel
-	simulate(ptr, tick, dimx, dimy, particles);
+	simulate(ptr, tick, dimx, dimy, particles, earth);
 	tick++;
 
 	// Unmap the ressource for visualization
