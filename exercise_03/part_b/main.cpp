@@ -19,6 +19,7 @@
 #include <cuda_runtime_api.h> 
 #include <cuda_gl_interop.h>
 #include <helper_cuda.h>
+#include "utils.h"
 
 GLuint  vbo;
 cudaGraphicsResource *resource;
@@ -26,8 +27,38 @@ size_t  size;
 uchar3* ptr;
 int dimx,dimy;
 int tick=0,A_ex=0;
+p particles[MAX_PARTICLES];
+Earth earth;
 
-void simulate_p1(uchar3* ptr, int tick, int width, int height);
+void simulate_p1(uchar3* ptr, int tick, int width, int height, p *particles, Earth *earth);
+
+/**
+ * This function assing random values for MAX_PARTICLES
+ * number of particles.
+ */
+void init(p *particles, Earth *earth) {
+    int i;
+    srand (time(NULL));
+    for (i=0; i < MAX_PARTICLES; i++) {
+        particles[i].x = dimx / 2;
+        particles[i].y = dimy / 2;
+        particles[i].mass = 1;
+        particles[i].radius = 1;
+        particles[i].v0 = 1;
+		particles[i].default_x = particles[i].x;
+        particles[i].default_y = particles[i].y;
+        particles[i].default_v0 = particles[i].v0;
+        
+		particles[i].red = 252;
+		particles[i].green = 212;
+		particles[i].blue = 64;
+    }
+
+	earth->radius = 10;
+	earth->distanceToSun = 200;
+	earth->xc = dimx / 2 + earth->distanceToSun;
+	earth->yc = dimy / 2;
+}
 
 void initialize(int *width, int *height) {
 	// initialize the dimension of the picture here
@@ -56,7 +87,7 @@ void display()
 	printf("%d ist size bei %d \n",size,dimx*dimy);
 
 	// Execute the CUDA kernel
-	simulate_p1(ptr, tick, dimx, dimy);
+	simulate_p1(ptr, tick, dimx, dimy, particles, &earth);
 	tick++;
 
 	// Unmap the ressource for visualization
@@ -114,6 +145,9 @@ int main(int argc, char **argv)
 	//getchar();
 	// Extensions initialization
 	glewInit();
+
+	// Initial random values for particles
+    init(particles, &earth);
 
 	// Generate GL buffer and register VBO
     generate(dimx, dimy);
