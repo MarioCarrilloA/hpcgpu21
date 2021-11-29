@@ -11,8 +11,7 @@
 #define SUN_POS_Y     600
 
 // Earth
-//#define EARTH_MASS    59720000
-#define EARTH_MASS    (5972 * pow(10.0, 24.0))
+#define EARTH_MASS    59720000
 #define EARTH_RADIUS  40
 #define EARTH_POS_X   600
 #define EARTH_POS_Y   200
@@ -22,7 +21,6 @@ struct p {
     int x;
     int y;
     int mass;
-    //int radius;
     float angle;
     float ax;
     float ay;

@@ -70,17 +70,17 @@ __global__ void kernel_update_particles_pos(uchar3 *pos,int width, int height, p
     float time_step = 0.01;
     float ax = 0.0;
     float ay = 0.0;
+    double CONST = -0.015;
 
     while (i < MAX_PARTICLES) {
+        double dx = particles[i].x - EARTH_POS_X;
+        double dy = particles[i].y - EARTH_POS_Y;
+        double r = sqrt((dx * dx) + (dy * dy));
 
-        /**TODO HERE:**/
-        //*****************************************************************************************
-        // We need to compute the acelaration of the particle according to its
-        // distance to the earth and its mass, for the moment aceleration is 0
-        // for x and y. Therefore velocity does not change.
-        // ****************************************************************************************
+        // Aceleration
+        ax = ((CONST * EARTH_MASS) / (particles[i].mass * r)) * (particles[i].x / r);
+        ay = ((CONST * EARTH_MASS) / (particles[i].mass * r)) * (particles[i].y / r);
 
-        // Compute velocity for every dimension
         particles[i].vx0 = particles[i].vx0 + (ax * time_step);
         particles[i].vy0 = particles[i].vy0 + (ay * time_step);
         particles[i].x = particles[i].x + particles[i].vx0;
