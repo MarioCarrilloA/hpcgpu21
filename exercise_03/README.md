@@ -77,5 +77,15 @@ sbatch V100_info.sbatch
 
 ```
 
+## 3. Particles
+
+The solution for this section is inside *part_a* and *part_b* directories.
+We can build the code by executing:
+
+```
+./access_to_node.sh
+make
+```
+
 [doc1]: https://www.nvidia.com/download/driverResults.aspx/124722/en-us
 [r1]: ./results
