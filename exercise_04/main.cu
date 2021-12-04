@@ -46,7 +46,7 @@ void init(p *xin, long npart) {
 }
 
 // GPU Kernel 1
-__global__ void kernel1(p *xin, p *xout, long int npart, double dt, double val) {
+__global__ void kernel_1(p *xin, p *xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
@@ -81,12 +81,12 @@ __global__ void kernel1(p *xin, p *xout, long int npart, double dt, double val) 
 }
 
 // GPU Kernel 2
-__global__ void kernel2(double *A, int niters) {
+__global__ void kernel_2(p *xin, p *xout, long int npart, double dt, double val) {
     //int tid=threadIdx.x;
 }
 
 
-void execute_k1(p *xin, p *xout, int npart, int niters) {
+void execute_kernel(p *xin, p *xout, int npart, int niters, int kernelid) {
     p *x_dev;
     p *xin_dev;
     p *xout_dev;
@@ -110,18 +110,33 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
     // START measure time
     cudaEventRecord(start, 0);
 
-    // Kernel execution
-    for (int i = 0; i < niters; i++) {
-        kernel1<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
+    if (kernelid == 1) {
+        // Kernel 1 execution
+        for (int i = 0; i < niters; i++) {
+            kernel_1<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
 
-        // Exchange pointers
-        x_dev = xin_dev;
-        xin_dev = xout_dev;
-        xout_dev = x_dev;
+            // Exchange pointers
+            x_dev = xin_dev;
+            xin_dev = xout_dev;
+            xout_dev = x_dev;
+        }
+
+    } else {
+        // Kernel 2 execution
+        for (int i = 0; i < niters; i++) {
+            kernel_2<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
+
+            // Exchange pointers
+            x_dev = xin_dev;
+            xin_dev = xout_dev;
+            xout_dev = x_dev;
+        }
     }
 
     // STOP measure time
     cudaEventRecord(stop, 0);
+
+    // Calculate time
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&execution_time, start, stop);
     //checkCudaErrors(cudaMemcpy(xout, xout_dev, sizeof(p) * npart, cudaMemcpyDeviceToHost));
@@ -139,21 +154,7 @@ int exercise04(int kernelid, int npart, int niters) {
     p *xin = (p *)malloc(sizeof(p) * npart);
     p *xout = (p *)malloc(sizeof(p) * npart);
     init(xin, npart);
-    //Print(xin);
-
-    if (kernelid == 1) {
-        execute_k1(xin, xout, npart, niters);
-
-    } else if (kernelid == 2) {
-        printf("Execute k2\n");
-    } else {
-        free(xin);
-        free(xout);
-        printf("error: Unknow kernel\n");
-        cerr << help << endl;
-        return 1;
-    }
-
+    execute_kernel(xin, xout, npart, niters, kernelid);
     free(xin);
     free(xout);
 
