@@ -15,10 +15,10 @@
 using namespace std;
 
 struct p {
-    double x;
-    double y;
-    double z;
-    double mass;
+    float x;
+    float y;
+    float z;
+    float m;
 };
 
 static const char help[] =
@@ -38,10 +38,10 @@ void Print(p *x) {
 
 void init(p *xin, long npart) {
     for (int i = 0; i < npart; i++) {
-        xin[i].x = (double(rand())/double((RAND_MAX)) * 10.0)+ 0.00001;
-        xin[i].y = (double(rand())/double((RAND_MAX)) * 10.0)+ 0.00001;
-        xin[i].z = (double(rand())/double((RAND_MAX)) * 10.0)+ 0.00001;
-        xin[i].mass = (double(rand())/double((RAND_MAX)) * 10.0)+ 0.00001;
+        xin[i].x = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
+        xin[i].y = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
+        xin[i].z = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
+        xin[i].m = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
     }
 }
 
@@ -52,23 +52,23 @@ __global__ void kernel1(p *xin, p *xout, long int npart, double dt, double val) 
     int i = t + g * blockDim.x;
     int off = gridDim.x * blockDim.x;
     int maxrad = 1.0;
-    double f, dsq;
+    float f, dsq;
 
     while (i < npart) {
         xout[i].x = xin[i].x;
         xout[i].y = xin[i].y;
         xout[i].z = xin[i].z;
-        f = 0.0;
-        dsq = 0.0;
+        f = 0.0f;
+        dsq = 0.0f;
         for (int j = 0; j < npart; j++) {
             dsq = (
-                    pow(xin[i].x - xin[j].x, 2.0) +
-                    pow(xin[i].y - xin[j].y, 2.0) +
-                    pow(xin[i].x - xin[j].x, 2.0)
+                    powf(xin[i].x - xin[j].x, 2.0f) +
+                    powf(xin[i].y - xin[j].y, 2.0f) +
+                    powf(xin[i].x - xin[j].x, 2.0f)
             );
 
             if (dsq < maxrad && dsq != 0 && i != j) {
-                f += xin[i].mass * xin[j].mass * (xin[i].x - xin[j].x) / dsq;
+                f += xin[i].m * xin[j].m * (xin[i].x - xin[j].x) / dsq;
             }
         }
         double s = f * dt * val;
@@ -90,8 +90,8 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
     p *x_dev;
     p *xin_dev;
     p *xout_dev;
-    double dt = 0.5;
-    double val = 0.5;
+    float dt = 0.5f;
+    float val = 0.5f;
     struct timeval start, end;
 
     // Set number of threads/blocks
