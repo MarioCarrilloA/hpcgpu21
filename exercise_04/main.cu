@@ -38,10 +38,10 @@ void Print(p *x) {
 
 void init(p *xin, long npart) {
     for (int i = 0; i < npart; i++) {
-        xin[i].x = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
-        xin[i].y = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
-        xin[i].z = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
-        xin[i].m = (float(rand())/float((RAND_MAX)) * 10.0f)+ 0.1f;
+        xin[i].x = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
+        xin[i].y = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
+        xin[i].z = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
+        xin[i].m = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
     }
 }
 
@@ -92,7 +92,12 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
     p *xout_dev;
     float dt = 0.5f;
     float val = 0.5f;
-    struct timeval start, end;
+    float execution_time = 0.0f;
+
+    // Structures to measure time
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
     // Set number of threads/blocks
     dim3 block(64, 64, 1);
@@ -101,7 +106,9 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
     checkCudaErrors(cudaMalloc((void **)&xin_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMalloc((void **)&xout_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMemcpy(xin_dev, xin, sizeof(p) * npart, cudaMemcpyHostToDevice));
-    gettimeofday(&start, 0);
+
+    // START measure time
+    cudaEventRecord(start, 0);
 
     // Kernel execution
     for (int i = 0; i < niters; i++) {
@@ -113,15 +120,15 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
         xout_dev = x_dev;
     }
 
-    gettimeofday(&end, 0);
-    checkCudaErrors(cudaMemcpy(xout, xout_dev, sizeof(p) * npart, cudaMemcpyDeviceToHost));
-    Print(xout);
+    // STOP measure time
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&execution_time, start, stop);
+    //checkCudaErrors(cudaMemcpy(xout, xout_dev, sizeof(p) * npart, cudaMemcpyDeviceToHost));
+    //Print(xout);
     checkCudaErrors(cudaFree(xin_dev));
     checkCudaErrors(cudaFree(xout_dev));
-    long seconds = end.tv_sec - start.tv_sec;
-    long microseconds = end.tv_usec - start.tv_usec;
-    double execution_time = seconds + microseconds * 1e-6;
-    printf("kernel execution: %.3f seconds\n", execution_time);
+    printf("kernel execution: %f seconds\n", (execution_time / 1000.0f));
 }
 
 
