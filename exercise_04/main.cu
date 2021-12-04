@@ -31,9 +31,9 @@ static const char help[] =
     "  -p number:     Number of particles to be processed\n"
     "  -h             Prints this help message.\n";
 
-void Print(p *xin, long int npart) {
-    for (int i = 0; i < 10; i++)
-        cout << xin[i].x << endl;
+void Print(p *x) {
+    for (int i = 0; i < DEFAULT_NUM_TO_SHOW; i++)
+        cout << x[i].x << endl;
 }
 
 void init(p *xin, long npart) {
@@ -51,9 +51,8 @@ __global__ void kernel1(p *xin, p *xout, long int npart, double dt, double val) 
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
     int off = gridDim.x * blockDim.x;
-    int maxrad = 1000;
+    int maxrad = 1.0;
     double f, dsq;
-
 
     while (i < npart) {
         xout[i].x = xin[i].x;
@@ -88,15 +87,16 @@ __global__ void kernel2(double *A, int niters) {
 
 
 void execute_k1(p *xin, p *xout, int npart, int niters) {
+    p *x_dev;
     p *xin_dev;
     p *xout_dev;
     double dt = 0.5;
     double val = 0.5;
     struct timeval start, end;
 
-    // set number of threads/blocks
-    dim3 block(1, 1, 1);
-    dim3 threads(1024, 1, 1);
+    // Set number of threads/blocks
+    dim3 block(64, 64, 1);
+    dim3 threads(32, 32, 1);
 
     checkCudaErrors(cudaMalloc((void **)&xin_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMalloc((void **)&xout_dev, sizeof(p) * npart));
@@ -106,16 +106,22 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
     // Kernel execution
     for (int i = 0; i < niters; i++) {
         kernel1<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
+
+        // Exchange pointers
+        x_dev = xin_dev;
+        xin_dev = xout_dev;
+        xout_dev = x_dev;
     }
 
     gettimeofday(&end, 0);
+    checkCudaErrors(cudaMemcpy(xout, xout_dev, sizeof(p) * npart, cudaMemcpyDeviceToHost));
+    Print(xout);
     checkCudaErrors(cudaFree(xin_dev));
     checkCudaErrors(cudaFree(xout_dev));
     long seconds = end.tv_sec - start.tv_sec;
     long microseconds = end.tv_usec - start.tv_usec;
     double execution_time = seconds + microseconds * 1e-6;
     printf("kernel execution: %.3f seconds\n", execution_time);
-
 }
 
 
@@ -126,7 +132,7 @@ int exercise04(int kernelid, int npart, int niters) {
     p *xin = (p *)malloc(sizeof(p) * npart);
     p *xout = (p *)malloc(sizeof(p) * npart);
     init(xin, npart);
-    //Print(xin, npart);
+    //Print(xin);
 
     if (kernelid == 1) {
         execute_k1(xin, xout, npart, niters);
