@@ -7,9 +7,9 @@
 #include <helper_cuda.h>
 #include <sys/time.h>
 
-#define DEFAULT_NUM_ITERATIONS 1000
+#define DEFAULT_NUM_ITERATIONS 10
 #define DEFAULT_KERNEL_ID      1
-#define DEFAULT_NUM_PARTICLES  1000000
+#define DEFAULT_NUM_PARTICLES  9984
 #define DEFAULT_NUM_TO_SHOW    10
 
 using namespace std;
