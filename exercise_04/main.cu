@@ -82,7 +82,40 @@ __global__ void kernel_1(p *xin, p *xout, long int npart, double dt, double val)
 
 // GPU Kernel 2
 __global__ void kernel_2(p *xin, p *xout, long int npart, double dt, double val) {
-    //int tid=threadIdx.x;
+    int t = threadIdx.x;
+    int g = blockIdx.x;
+    int i = t + g * blockDim.x;
+    int off = gridDim.x * blockDim.x;
+    int maxrad = 1.0;
+    int warp_size = 32;
+    float f, dsq;
+
+    while (i < npart) {
+        xout[i].x = xin[i].x;
+        xout[i].y = xin[i].y;
+        xout[i].z = xin[i].z;
+        f = 0.0f;
+        dsq = 0.0f;
+        for (int j = 0; j < npart; j++) {
+            for (int wi = i; wi < warp_size + i; wi++) {
+                dsq = (
+                    powf(xin[wi].x - xin[j].x, 2.0f) +
+                    powf(xin[wi].y - xin[j].y, 2.0f) +
+                    powf(xin[wi].x - xin[j].x, 2.0f)
+                );
+
+                if (dsq < maxrad && dsq != 0 && i != j) {
+                    f += xin[wi].m * xin[j].m * (xin[wi].x - xin[j].x) / dsq;
+                }
+            }
+        }
+        double s = f * dt * val;
+        xout[i].x += s;
+        xout[i].y += s;
+        xout[i].z += s;
+
+        i+=(off + warp_size);
+    }
 }
 
 
