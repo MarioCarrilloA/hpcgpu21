@@ -51,14 +51,14 @@ __global__ void kernel1(p *xin, p *xout, int npart, double dt, double val) {
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
     int off = gridDim.x * blockDim.x;
-    int maxrad = 2;
+    int maxrad = 1000;
     double f;
 
     while (i < npart) {
         xout[i].x = xin[i].x;
         xout[i].y = xin[i].y;
         xout[i].z = xin[i].z;
-        for (int j=0; j < npart; i++) {
+        for (int j = 0; j < npart; j++) {
             double dsq = (
                     pow(xin[i].x - xin[j].x, 2.0) +
                     pow(xin[i].y - xin[j].y, 2.0) +
