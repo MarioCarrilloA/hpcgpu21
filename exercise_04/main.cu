@@ -31,12 +31,12 @@ static const char help[] =
     "  -p number:     Number of particles to be processed\n"
     "  -h             Prints this help message.\n";
 
-void Print(p *xin, int npart) {
+void Print(p *xin, long int npart) {
     for (int i = 0; i < 10; i++)
         cout << xin[i].x << endl;
 }
 
-void init(p *xin, int npart) {
+void init(p *xin, long npart) {
     for (int i = 0; i < npart; i++) {
         xin[i].x = (double(rand())/double((RAND_MAX)) * 10.0)+ 0.00001;
         xin[i].y = (double(rand())/double((RAND_MAX)) * 10.0)+ 0.00001;
@@ -46,20 +46,23 @@ void init(p *xin, int npart) {
 }
 
 // GPU Kernel 1
-__global__ void kernel1(p *xin, p *xout, int npart, double dt, double val) {
+__global__ void kernel1(p *xin, p *xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
     int off = gridDim.x * blockDim.x;
     int maxrad = 1000;
-    double f;
+    double f, dsq;
+
 
     while (i < npart) {
         xout[i].x = xin[i].x;
         xout[i].y = xin[i].y;
         xout[i].z = xin[i].z;
+        f = 0.0;
+        dsq = 0.0;
         for (int j = 0; j < npart; j++) {
-            double dsq = (
+            dsq = (
                     pow(xin[i].x - xin[j].x, 2.0) +
                     pow(xin[i].y - xin[j].y, 2.0) +
                     pow(xin[i].x - xin[j].x, 2.0)
@@ -76,7 +79,6 @@ __global__ void kernel1(p *xin, p *xout, int npart, double dt, double val) {
 
         i+=off;
     }
-
 }
 
 // GPU Kernel 2
@@ -92,6 +94,10 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
     double val = 0.5;
     struct timeval start, end;
 
+    // set number of threads/blocks
+    dim3 block(1, 1, 1);
+    dim3 threads(1024, 1, 1);
+
     checkCudaErrors(cudaMalloc((void **)&xin_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMalloc((void **)&xout_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMemcpy(xin_dev, xin, sizeof(p) * npart, cudaMemcpyHostToDevice));
@@ -99,11 +105,12 @@ void execute_k1(p *xin, p *xout, int npart, int niters) {
 
     // Kernel execution
     for (int i = 0; i < niters; i++) {
-        kernel1<<<1, 1>>>(xin, xout, npart, dt, val);
+        kernel1<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
     }
 
     gettimeofday(&end, 0);
-    //checkCudaErrors(cudaFree(xin_dev));
+    checkCudaErrors(cudaFree(xin_dev));
+    checkCudaErrors(cudaFree(xout_dev));
     long seconds = end.tv_sec - start.tv_sec;
     long microseconds = end.tv_usec - start.tv_usec;
     double execution_time = seconds + microseconds * 1e-6;
@@ -116,7 +123,7 @@ int exercise04(int kernelid, int npart, int niters) {
     if (kernelid < 1 || kernelid > 2)
         return 1;
 
-    p *xin  = (p *)malloc(sizeof(p) * npart);
+    p *xin = (p *)malloc(sizeof(p) * npart);
     p *xout = (p *)malloc(sizeof(p) * npart);
     init(xin, npart);
     //Print(xin, npart);
@@ -144,8 +151,8 @@ int exercise04(int kernelid, int npart, int niters) {
 int main(int argc, char **argv) {
     int opt;
     int kernelid = DEFAULT_KERNEL_ID;
-    int npart = DEFAULT_NUM_PARTICLES;
     int niters = DEFAULT_NUM_ITERATIONS;
+    long int npart = DEFAULT_NUM_PARTICLES;
 
     while ((opt = getopt(argc, argv, "k:i:p:h")) != EOF) {
         switch (opt) {
@@ -171,7 +178,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    cout << "Kernel:" << kernelid << " Particles:" << npart << " Iterations: " << niters << endl;
+    cout << "Kernel: " << kernelid << endl;
+    cout << "Particles: " << npart << endl;
+    cout << "Iterations: " << niters << endl;
+    cout << "Executing ..." << endl;
     exercise04(kernelid, npart, niters);
 
     return 0;
