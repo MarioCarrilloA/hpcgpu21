@@ -8,7 +8,6 @@
 #include <sys/time.h>
 
 #define DEFAULT_NUM_ITERATIONS 1000
-#define DEFAULT_KERNEL_ID      1
 #define DEFAULT_NUM_PARTICLES  80000
 #define DEFAULT_NUM_TO_SHOW    10
 
@@ -24,10 +23,8 @@ struct p {
 static const char help[] =
     "Usage: exercise01 [-k number] [-i number] [-p number] [-h]\n"
     "Description:\n"
-    "  -k number:     Specifies the kernel to be executed from the\n"
-    "                 2 available in exercise 4.\n"
-    "  -i number:     Specifies how many computing iterations will be\n"
-    "                 executed for the chosen function.\n"
+    "  -i number:     Specifies how many times the kernel will be\n"
+    "                 executed.\n"
     "  -p number:     Number of particles to be processed\n"
     "  -h             Prints this help message.\n";
 
@@ -45,8 +42,8 @@ void init(p *xin, long npart) {
     }
 }
 
-// GPU Kernel 1
-__global__ void kernel_1(p *xin, p *xout, long int npart, double dt, double val) {
+// GPU Kernel
+__global__ void kernel(p *xin, p *xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
@@ -80,46 +77,8 @@ __global__ void kernel_1(p *xin, p *xout, long int npart, double dt, double val)
     }
 }
 
-// GPU Kernel 2
-__global__ void kernel_2(p *xin, p *xout, long int npart, double dt, double val) {
-    int t = threadIdx.x;
-    int g = blockIdx.x;
-    int i = t + g * blockDim.x;
-    int off = gridDim.x * blockDim.x;
-    int maxrad = 1.0;
-    int warp_size = 32;
-    float f, dsq;
 
-    while (i < npart) {
-        xout[i].x = xin[i].x;
-        xout[i].y = xin[i].y;
-        xout[i].z = xin[i].z;
-        f = 0.0f;
-        dsq = 0.0f;
-        for (int j = 0; j < npart; j++) {
-            for (int wi = i; wi < warp_size + i; wi++) {
-                dsq = (
-                    powf(xin[wi].x - xin[j].x, 2.0f) +
-                    powf(xin[wi].y - xin[j].y, 2.0f) +
-                    powf(xin[wi].x - xin[j].x, 2.0f)
-                );
-
-                if (dsq < maxrad && dsq != 0 && i != j) {
-                    f += xin[wi].m * xin[j].m * (xin[wi].x - xin[j].x) / dsq;
-                }
-            }
-        }
-        double s = f * dt * val;
-        xout[i].x += s;
-        xout[i].y += s;
-        xout[i].z += s;
-
-        i+=(off + warp_size);
-    }
-}
-
-
-void execute_kernel(p *xin, p *xout, int npart, int niters, int kernelid) {
+void execute_kernel(p *xin, p *xout, int npart, int niters) {
     p *x_dev;
     p *xin_dev;
     p *xout_dev;
@@ -136,35 +95,27 @@ void execute_kernel(p *xin, p *xout, int npart, int niters, int kernelid) {
     dim3 block(4096, 1, 1);
     dim3 threads(1024, 1, 1);
 
+     // START measure time
+    cudaEventRecord(start, 0);
+
+    // Memory management
     checkCudaErrors(cudaMalloc((void **)&xin_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMalloc((void **)&xout_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMemcpy(xin_dev, xin, sizeof(p) * npart, cudaMemcpyHostToDevice));
 
-    // START measure time
-    cudaEventRecord(start, 0);
+    // Kernel 1 execution
+    for (int i = 0; i < niters; i++) {
+        kernel<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
 
-    if (kernelid == 1) {
-        // Kernel 1 execution
-        for (int i = 0; i < niters; i++) {
-            kernel_1<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
-
-            // Exchange pointers
-            x_dev = xin_dev;
-            xin_dev = xout_dev;
-            xout_dev = x_dev;
-        }
-
-    } else {
-        // Kernel 2 execution
-        for (int i = 0; i < niters; i++) {
-            kernel_2<<<block, threads>>>(xin_dev, xout_dev, npart, dt, val);
-
-            // Exchange pointers
-            x_dev = xin_dev;
-            xin_dev = xout_dev;
-            xout_dev = x_dev;
-        }
+        // Exchange pointers
+        x_dev = xin_dev;
+        xin_dev = xout_dev;
+        xout_dev = x_dev;
     }
+
+    checkCudaErrors(cudaMemcpy(xout, xout_dev, sizeof(p) * npart, cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaFree(xin_dev));
+    checkCudaErrors(cudaFree(xout_dev));
 
     // STOP measure time
     cudaEventRecord(stop, 0);
@@ -172,22 +123,15 @@ void execute_kernel(p *xin, p *xout, int npart, int niters, int kernelid) {
     // Calculate time
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&execution_time, start, stop);
-    //checkCudaErrors(cudaMemcpy(xout, xout_dev, sizeof(p) * npart, cudaMemcpyDeviceToHost));
-    //Print(xout);
-    checkCudaErrors(cudaFree(xin_dev));
-    checkCudaErrors(cudaFree(xout_dev));
     printf("kernel execution: %f seconds\n", (execution_time / 1000.0f));
 }
 
 
-int exercise04(int kernelid, int npart, int niters) {
-    if (kernelid < 1 || kernelid > 2)
-        return 1;
-
+int exercise04(int npart, int niters) {
     p *xin = (p *)malloc(sizeof(p) * npart);
     p *xout = (p *)malloc(sizeof(p) * npart);
     init(xin, npart);
-    execute_kernel(xin, xout, npart, niters, kernelid);
+    execute_kernel(xin, xout, npart, niters);
     free(xin);
     free(xout);
 
@@ -197,15 +141,11 @@ int exercise04(int kernelid, int npart, int niters) {
 
 int main(int argc, char **argv) {
     int opt;
-    int kernelid = DEFAULT_KERNEL_ID;
     int niters = DEFAULT_NUM_ITERATIONS;
     long int npart = DEFAULT_NUM_PARTICLES;
 
-    while ((opt = getopt(argc, argv, "k:i:p:h")) != EOF) {
+    while ((opt = getopt(argc, argv, "i:p:h")) != EOF) {
         switch (opt) {
-            case 'k':
-                kernelid = atoi(optarg);
-                break;
             case 'i':
                 niters = atoi(optarg);
                 break;
@@ -225,11 +165,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    cout << "Kernel: " << kernelid << endl;
     cout << "Particles: " << npart << endl;
     cout << "Iterations: " << niters << endl;
     cout << "Executing ..." << endl;
-    exercise04(kernelid, npart, niters);
+    exercise04(npart, niters);
 
     return 0;
 }
