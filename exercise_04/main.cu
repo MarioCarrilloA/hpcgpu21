@@ -7,9 +7,9 @@
 #include <helper_cuda.h>
 #include <sys/time.h>
 
-#define DEFAULT_NUM_ITERATIONS 10
+#define DEFAULT_NUM_ITERATIONS 1000
 #define DEFAULT_KERNEL_ID      1
-#define DEFAULT_NUM_PARTICLES  9984
+#define DEFAULT_NUM_PARTICLES  80000
 #define DEFAULT_NUM_TO_SHOW    10
 
 using namespace std;
@@ -133,8 +133,8 @@ void execute_kernel(p *xin, p *xout, int npart, int niters, int kernelid) {
     cudaEventCreate(&stop);
 
     // Set number of threads/blocks
-    dim3 block(64, 64, 1);
-    dim3 threads(32, 32, 1);
+    dim3 block(4096, 1, 1);
+    dim3 threads(1024, 1, 1);
 
     checkCudaErrors(cudaMalloc((void **)&xin_dev, sizeof(p) * npart));
     checkCudaErrors(cudaMalloc((void **)&xout_dev, sizeof(p) * npart));
