@@ -3,7 +3,9 @@
 #include <iostream>
 #include <cstdlib>
 #include <unistd.h>
+#include <helper_cuda.h>
 #include "cublas_v2.h"
+#include <mma.h>
 
 #define DEFAULT_M     3
 #define DEFAULT_N     3
@@ -11,7 +13,12 @@
 #define DEFAULT_ALPHA 1
 #define DEFAULT_BETA  1
 
+const int WMMA_M = 16;
+const int WMMA_N = 16;
+const int WMMA_K = 16;
+
 using namespace std;
+using namespace nvcuda;
 
 static const char help[] =
     "Usage: exercise05 [-m, -n, -k, -a, -b number] [-h]\n"
@@ -79,51 +86,6 @@ void Print_output_as_python(float *C_dev, int n, int m) {
     free(C_host);
 }
 
-void gemm_computation(float *A, float *B, float *C, int Cm, int Cn, int Ck, float a, float b) {
-    // We must this exchange due to FORTRAN and C format differences:
-    // C :      C(n,m) = B(n,k) * A(k,m)
-    // Fortran: C(m,n) = A(m,k) * B(k,n)
-    int m = Cn;
-    int n = Cm;
-    int k = Ck;
-
-    // Leading dimensions
-    int lda = m;
-    int ldb = k;
-    int ldc = m;
-
-    // Scalars
-    float *alpha = &a;
-    float *beta = &b;
-    float execution_time = 0.0f;
-
-    // Structures to measure time
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    // Create a handle for CUBLAS
-    cublasHandle_t handle;
-    cublasCreate(&handle);
-
-    // START measure time
-    cudaEventRecord(start, 0);
-
-    // Do the actual multiplication
-    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-
-    // STOP measure time
-    cudaEventRecord(stop, 0);
-
-    // Calculate time
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&execution_time, start, stop);
-    printf("### GAMM execution: %f seconds\n", (execution_time / 1000.0f));
-
-    // Destroy the handle
-    cublasDestroy(handle);
-}
-
 void init_rand_matrix_GPU(float *A, int m, int n) {
     // Random number generator
     curandGenerator_t generator;
@@ -136,34 +98,141 @@ void init_rand_matrix_GPU(float *A, int m, int n) {
     curandGenerateUniform(generator, A, n * m);
 }
 
-void matrices_computation(int m, int n, int k, float a, float b) {
-    float *A_dev;
-    float *B_dev;
-    float *C_dev;
+__global__ void wmma_computation(half *A, half *B, float *C, int Cm, int Cn, int Ck, float alpha, float beta) {
+    // We must this exchange due to FORTRAN and C format differences:
+    // C :      C(n,m) = B(n,k) * A(k,m)
+    // Fortran: C(m,n) = A(m,k) * B(k,n)
+    int m = Cn;
+    int n = Cm;
+    int k = Ck;
+
+    // Leading dimensions
+    int lda = m;
+    int ldb = k;
+    int ldc = m;
+
+    // Tile using a 2D grid
+    int warpN = (blockIdx.x * blockDim.x + threadIdx.x) / warpSize;
+    int warpM = (blockIdx.y * blockDim.y + threadIdx.y);
+
+    // Define the fragments
+    wmma::fragment<wmma::matrix_a, WMMA_M, WMMA_N, WMMA_K, half, wmma::row_major> A_frag;
+    wmma::fragment<wmma::matrix_b, WMMA_M, WMMA_N, WMMA_K, half, wmma::row_major> B_frag;
+    wmma::fragment<wmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float> C_frag;
+    wmma::fragment<wmma::accumulator, WMMA_M, WMMA_N, WMMA_K, float> BA_frag;
+    wmma::fill_fragment(BA_frag, 0.0f);
+
+    // Loop for the computation
+    for(int i = 0; i < k; i += WMMA_K){
+        int rowA = warpN * WMMA_N;
+        int colA = i;
+        int rowB = i;
+        int colB = warpM * WMMA_M;
+
+        if(rowA < k && colA < m && rowB < n && colB < k){
+            // Load the inputs
+            wmma::load_matrix_sync(A_frag, A + rowA * lda + colA, lda);
+            wmma::load_matrix_sync(B_frag, B + rowB * ldb + colB, ldb);
+
+            // Matrix multiplication
+            wmma::mma_sync(BA_frag, A_frag, B_frag, BA_frag);
+        }
+    }
+
+    // C = alpha * C + beta * B * A
+    int rowC = warpN * WMMA_N;
+    int colC = warpM * WMMA_M;
+
+    if(rowC < n && colC < m){
+        wmma::load_matrix_sync(C_frag, C + rowC * ldc + colC, ldc, wmma::mem_row_major);
+
+        for(int i = 0; i < C_frag.num_elements; i++){
+            C_frag.x[i] = alpha * C_frag.x[i] + beta * BA_frag.x[i];
+        }
+
+        wmma::store_matrix_sync(C + rowC * ldc + colC, C_frag, ldc, wmma::mem_row_major);
+    }
+
+}
+
+__global__ void castF32ToF16 (half *f16, float *f32, int n){
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if(i < n){
+        f16[i] = f32[i];
+    }
+}
+
+void matrices_computation(int m, int n, int k, float alpha, float beta) {
+    float *A_f32;
+    float *B_f32;
+    float *C_f32;
+
+    half *A_f16;
+    half *B_f16;
+
+    // Scalars
+    float execution_time = 0.0f;
 
     // GPU memory allocations
-    cudaMalloc(&A_dev, n * k * sizeof(float));
-    cudaMalloc(&B_dev, k * m * sizeof(float));
-    cudaMalloc(&C_dev, n * m * sizeof(float));
+    checkCudaErrors(cudaMalloc(&A_f32, n * k * sizeof(float)));
+    checkCudaErrors(cudaMalloc(&B_f32, k * m * sizeof(float)));
+    checkCudaErrors(cudaMalloc(&C_f32, n * m * sizeof(float)));
+
+    checkCudaErrors(cudaMalloc(&A_f16, n * k * sizeof(half)));
+    checkCudaErrors(cudaMalloc(&B_f16, k * m * sizeof(half)));
 
     // Init matrices A, B and C in GPU space
-    init_rand_matrix_GPU(A_dev, n, k);
-    init_rand_matrix_GPU(B_dev, k, m);
-    init_rand_matrix_GPU(C_dev, n, m);
+    init_rand_matrix_GPU(A_f32, n, k);
+    init_rand_matrix_GPU(B_f32, k, m);
+    init_rand_matrix_GPU(C_f32, n, m);
+
+    // Cast A, B to fp16 half type
+    castF32ToF16 <<<(n * k + 255) / 256, 256 >>> (A_f16, A_f32, n*k);
+    castF32ToF16 <<<(k * m + 255) / 256, 256 >>> (B_f16, B_f32, k*m);
 
     // NOTE - PART 1: This part is just for testing
     //Print_input_as_python(A_dev, B_dev, C_dev, m, n, k, a, b);
 
     // Multiply A and B on GPU
-    gemm_computation(A_dev, B_dev, C_dev, m, n, k, a, b);
+    dim3 gridDim;
+    dim3 blockDim;
+    blockDim.x = 128;
+    blockDim.y = 4;
+    gridDim.x = (n + (WMMA_N * blockDim.x / 32 - 1)) / (WMMA_N * blockDim.x / 32);
+    gridDim.y = (m + m * blockDim.y - 1) / (WMMA_N * blockDim.y);
+
+    // Structures to measure time
+    cudaEvent_t start, stop;
+    checkCudaErrors(cudaEventCreate(&start));
+    checkCudaErrors(cudaEventCreate(&stop));
+
+    // START measure time
+    checkCudaErrors(cudaEventRecord(start, 0));
+
+    // Call the kernel for the matrix computation
+    wmma_computation <<< gridDim, blockDim >>> (A_f16, B_f16, C_f32, m, n, k, alpha, beta);
+
+    // STOP measure time
+    checkCudaErrors(cudaEventRecord(stop, 0));
+
+    // Calculate time
+    checkCudaErrors(cudaEventSynchronize(stop));
+    checkCudaErrors(cudaEventElapsedTime(&execution_time, start, stop));
+    printf("### GAMM execution: %f seconds\n", (execution_time / 1000.0f));
+
+    // Destroy the handle
+    checkCudaErrors(cudaEventDestroy(start));
+    checkCudaErrors(cudaEventDestroy(stop));
 
     // NOTE - PART 2: This part is just for testing
     //Print_output_as_python(C_dev, n, m);
 
     // Free allocated memory on GPU
-    cudaFree(A_dev);
-    cudaFree(B_dev);
-    cudaFree(C_dev);
+    checkCudaErrors(cudaFree(A_f32));
+    checkCudaErrors(cudaFree(B_f32));
+    checkCudaErrors(cudaFree(C_f32));
+    checkCudaErrors(cudaFree(A_f16));
+    checkCudaErrors(cudaFree(B_f16));
 }
 
 int main(int argc, char **argv) {
