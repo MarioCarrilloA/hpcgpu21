@@ -64,8 +64,8 @@ int main()
 
         for (int j = 0; j <= k; j++) {
             cudaEventRecord(start);
-    		// -------- Make benchmark to device copy --------
-    		checkCudaErrors(cudaMemcpy(data_dev, data_host, N, cudaMemcpyHostToDevice));
+            // -------- Make benchmark to device copy --------
+            checkCudaErrors(cudaMemcpy(data_dev, data_host, N, cudaMemcpyHostToDevice));
             cudaEventRecord(stop);
             cudaEventSynchronize(stop);
             cudaEventElapsedTime(&elapsedtime, start, stop);
