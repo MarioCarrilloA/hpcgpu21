@@ -3,13 +3,14 @@
 #include <iostream>
 #include <cstdlib>
 #include <unistd.h>
+#include <helper_cuda.h>
 #include "cublas_v2.h"
 
 #define DEFAULT_M     3
 #define DEFAULT_N     3
 #define DEFAULT_K     2
-#define DEFAULT_ALPHA 1
-#define DEFAULT_BETA  1
+#define DEFAULT_ALPHA 1.0
+#define DEFAULT_BETA  1.0
 
 using namespace std;
 
@@ -43,9 +44,9 @@ void Print_input_as_python(float *A_dev, float *B_dev, float *C_dev, int m, int 
     float *C_host = (float *)malloc(n * m * sizeof(float));
 
     // Copy from GPU device to host
-    cudaMemcpy(A_host, A_dev, n * k * sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(B_host, B_dev, k * m * sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(C_host, C_dev, n * m * sizeof(float),cudaMemcpyDeviceToHost);
+    checkCudaErrors(cudaMemcpy(A_host, A_dev, n * k * sizeof(float), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(B_host, B_dev, k * m * sizeof(float), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(C_host, C_dev, n * m * sizeof(float), cudaMemcpyDeviceToHost));
 
     // Print matrix content as python format
     cout << "import numpy as np" << endl;
@@ -99,25 +100,25 @@ void gemm_computation(float *A, float *B, float *C, int Cm, int Cn, int Ck, floa
 
     // Structures to measure time
     cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    checkCudaErrors(cudaEventCreate(&start));
+    checkCudaErrors(cudaEventCreate(&stop));
 
     // Create a handle for CUBLAS
     cublasHandle_t handle;
     cublasCreate(&handle);
 
     // START measure time
-    cudaEventRecord(start, 0);
+    checkCudaErrors(cudaEventRecord(start, 0));
 
     // Do the actual multiplication
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 
     // STOP measure time
-    cudaEventRecord(stop, 0);
+    checkCudaErrors(cudaEventRecord(stop, 0));
 
     // Calculate time
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&execution_time, start, stop);
+    checkCudaErrors(cudaEventSynchronize(stop));
+    checkCudaErrors(cudaEventElapsedTime(&execution_time, start, stop));
     printf("### GAMM execution: %f seconds\n", (execution_time / 1000.0f));
 
     // Destroy the handle
@@ -142,9 +143,9 @@ void matrices_computation(int m, int n, int k, float a, float b) {
     float *C_dev;
 
     // GPU memory allocations
-    cudaMalloc(&A_dev, n * k * sizeof(float));
-    cudaMalloc(&B_dev, k * m * sizeof(float));
-    cudaMalloc(&C_dev, n * m * sizeof(float));
+    checkCudaErrors(cudaMalloc(&A_dev, n * k * sizeof(float)));
+    checkCudaErrors(cudaMalloc(&B_dev, k * m * sizeof(float)));
+    checkCudaErrors(cudaMalloc(&C_dev, n * m * sizeof(float)));
 
     // Init matrices A, B and C in GPU space
     init_rand_matrix_GPU(A_dev, n, k);
@@ -161,9 +162,9 @@ void matrices_computation(int m, int n, int k, float a, float b) {
     //Print_output_as_python(C_dev, n, m);
 
     // Free allocated memory on GPU
-    cudaFree(A_dev);
-    cudaFree(B_dev);
-    cudaFree(C_dev);
+    checkCudaErrors(cudaFree(A_dev));
+    checkCudaErrors(cudaFree(B_dev));
+    checkCudaErrors(cudaFree(C_dev));
 }
 
 int main(int argc, char **argv) {
