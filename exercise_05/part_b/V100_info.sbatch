@@ -11,19 +11,20 @@
 module purge
 module add "nvidia/10.0"
 
-BIN=exercise05_b1
+BIN1=exercise05_b1
+BIN2=exercise05_b2
 
 make
 
 echo "(m, n, k)"
 echo "(4096,4096,1024)"
-./$BIN -m 4096 -n 4096 -k 1024
+./$BIN1 -m 4096 -n 4096 -k 1024
 
 echo "(4096,1024,2048)"
-./$BIN -m 4096 -n 1024 -k 2048
+./$BIN1 -m 4096 -n 1024 -k 2048
 
 echo "(4096,4096,4096)"
-./$BIN -m 4096 -n 4096 -m 4096
+./$BIN1 -m 4096 -n 4096 -k 4096
 
 echo "(8192,8192,8192)"
-./$BIN -m 8192 -n 8192 -m 8192
+./$BIN2 -m 8192 -n 8192 -k 8192
