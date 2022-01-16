@@ -252,19 +252,20 @@ void matrices_computation(int m, int n, int k, float a, float b) {
     wmma_example <<< gridDim, blockDim >>> (A_fp16, B_fp16, C_fp16, C_wmma, m, n, k, alpha, beta);
     checkCudaErrors(cudaEventRecord(stopWMMA));
 
-    // Print debug output matrices as python format
-    printf("print('Python:________________________')\n");
-    printf("print((beta * C.dot(C.T)) + (alpha * (A.dot(B))))\n");
-    print_fullp_matrix(C_wmma, m, n, "D");
-    printf("print('WMMA  :________________________')\n");
-    printf("print(D)\n");
-
     // Measure time
     float wmmaTime;
     checkCudaErrors(cudaEventSynchronize(stopWMMA));
     checkCudaErrors(cudaEventElapsedTime(&wmmaTime, startWMMA, stopWMMA));
     checkCudaErrors(cudaEventDestroy(startWMMA));
     checkCudaErrors(cudaEventDestroy(stopWMMA));
+
+    // Print debug output matrices as python format
+    printf("print('Python:________________________')\n");
+    printf("print((beta * C.dot(C.T)) + (alpha * (A.dot(B))))\n");
+    print_fullp_matrix(C_wmma, m, n, "D");
+    printf("print('WMMA  :________________________')\n");
+    printf("print(D)\n");
+    printf("### WAMM execution: %f seconds\n", (wmmaTime / 1000.0f));
 
     // Free memory
     checkCudaErrors(cudaFree(A_fp32));
