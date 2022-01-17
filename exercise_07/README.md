@@ -1,4 +1,4 @@
-# Exercise 4
+# Exercise 7
 
 ## 1. HOWTO
 
@@ -8,7 +8,7 @@ steps:
 ```
 ./access_to_node.sh
 make
-./exercise04
+./exercise07
 ```
 
 The default values are **80k** particles and **1000** kernel calls. However,

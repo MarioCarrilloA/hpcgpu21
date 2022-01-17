@@ -56,13 +56,13 @@ __global__ void kernel(p *xin, p *xout, long int npart, double dt, double val) {
     extern __shared__ p x_shared[];
     p *xi = &x_shared[0];
     p *xj = &x_shared[blockDim.x];
-    
+
     while (i < npart) {
-        
+
         f = 0.0f;
 
         *((float4*)(&xi[0]) + t) = *((float4*)(&xin[g * blockDim.x]) + t);
-        
+
         for(int ja = 0; ja < npart; ja+= size) {
             for(int jl = 0; jl < size; jl += blockDim.x){
                 *((float4*)(&xj[jl]) + t) = *((float4*)(&xin[ja + jl]) + t);
@@ -105,8 +105,8 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
     cudaEventCreate(&stop);
 
     // Set number of threads/blocks
-    dim3 block(1024, 1, 1);
-    dim3 threads(1024, 1024, 64);
+    dim3 block(4096, 1, 1);
+    dim3 threads(1024, 1, 1);
 
      // START measure time
     cudaEventRecord(start, 0);
