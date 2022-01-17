@@ -8,7 +8,7 @@
 #include <sys/time.h>
 
 #define DEFAULT_NUM_ITERATIONS 1000
-#define DEFAULT_NUM_PARTICLES  1000000
+#define DEFAULT_NUM_PARTICLES  40000
 #define DEFAULT_NUM_TO_SHOW    10
 
 using namespace std;
@@ -46,22 +46,22 @@ void init(p *xin, long npart) {
 __global__ void kernel(p *xin, p *xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
-    //int i = t + g * blockDim.x;
-    //int off = gridDim.x * blockDim.x;
+    int i = t + g * blockDim.x;
+    int off = gridDim.x * blockDim.x;
     int maxrad = 1.0;
     float f, dsq;
     float distx, disty, distz;
-    int size = blockDim.x * 5;
+    int size = blockDim.x;
 
-    extern __shared__ p *x_shared;
+    extern __shared__ p x_shared[];
     p *xi = &x_shared[0];
-    *((float4*)(&xi[0]) + t) = *((float4*)(&xin[g * blockDim.x]) + t);
-
-    //extern __shared__ p xj[size];
     p *xj = &x_shared[blockDim.x];
+
+    *((float4*)(&xi[0]) + t) = *((float4*)(&xin[g * blockDim.x]) + t);
+        
     for(int ja = 0; ja < npart; ja+= size) {
-        for(int jl = 0; jl < size / blockDim.x; jl += blockDim.x){
-            *((float4*)(&xj[jl]) + t) = *((float4*)(&xj[ja + jl]) + t);
+        for(int jl = 0; jl < size; jl += blockDim.x){
+            *((float4*)(&xj[jl]) + t) = *((float4*)(&xin[ja + jl]) + t);
         }
         __syncthreads();
 
@@ -72,15 +72,23 @@ __global__ void kernel(p *xin, p *xout, long int npart, double dt, double val) {
 
             dsq = distx * distx + disty * disty + distz * distz;
 
-            if (dsq < maxrad && dsq != 0 && t != j) {
+            if (dsq < maxrad && dsq != 0 && i != j) {
                 f += xi[t].m * xj[j - ja].m * (xi[t].x - xj[j - ja].x) / dsq;
             }
         }
     }
     double s = f * dt * val;
-    xout[t].x = xi[t].x + s;
-    xout[t].y = xi[t].y + s;
-    xout[t].z = xi[t].z + s;
+    xout[i].x = xi[t].x + s;
+    xout[i].y = xi[t].y + s;
+    xout[i].z = xi[t].z + s;
+
+    /*
+    while (i < npart) {
+        
+        
+
+        i+=off;
+    }*/
 
     /*
     while (i < npart) {
@@ -128,7 +136,7 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
     cudaEventCreate(&stop);
 
     // Set number of threads/blocks
-    dim3 block(4096, 1, 1);
+    dim3 block(1024, 1, 1);
     dim3 threads(1024, 1, 1);
 
      // START measure time
@@ -142,7 +150,7 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
     // for dynamic allocation of shared memory
     // Kernel 1 execution
     for (int i = 0; i < niters; i++) {
-        kernel<<<block, threads, sizeof(p) * 4096 * 6>>>(xin_dev, xout_dev, npart, dt, val);
+        kernel<<<block, threads, sizeof(p) * 1024 * 2>>>(xin_dev, xout_dev, npart, dt, val);
 
         // Exchange pointers
         x_dev = xin_dev;
@@ -156,6 +164,12 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
 
     // STOP measure time
     cudaEventRecord(stop, 0);
+
+    int count = 0;
+    while(count < npart){
+        cout << "xout[" << count << "].x: " << xout[count].x << "\n";
+        count++;
+    }
 
     // Calculate time
     cudaEventSynchronize(stop);
