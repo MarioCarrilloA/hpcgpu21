@@ -8,7 +8,7 @@
 #include <sys/time.h>
 
 #define DEFAULT_NUM_ITERATIONS 1000
-#define DEFAULT_NUM_PARTICLES  40000
+#define DEFAULT_NUM_PARTICLES  1000000
 #define DEFAULT_NUM_TO_SHOW    10
 
 using namespace std;
@@ -56,69 +56,38 @@ __global__ void kernel(p *xin, p *xout, long int npart, double dt, double val) {
     extern __shared__ p x_shared[];
     p *xi = &x_shared[0];
     p *xj = &x_shared[blockDim.x];
-
-    *((float4*)(&xi[0]) + t) = *((float4*)(&xin[g * blockDim.x]) + t);
-        
-    for(int ja = 0; ja < npart; ja+= size) {
-        for(int jl = 0; jl < size; jl += blockDim.x){
-            *((float4*)(&xj[jl]) + t) = *((float4*)(&xin[ja + jl]) + t);
-        }
-        __syncthreads();
-
-        for(int j = ja; j < ja + size; j++){
-            distx = xi[t].x - xj[j - ja].x;
-            disty = xi[t].y - xj[j - ja].y;
-            distz = xi[t].z - xj[j - ja].z;
-
-            dsq = distx * distx + disty * disty + distz * distz;
-
-            if (dsq < maxrad && dsq != 0 && i != j) {
-                f += xi[t].m * xj[j - ja].m * (xi[t].x - xj[j - ja].x) / dsq;
-            }
-        }
-    }
-    double s = f * dt * val;
-    xout[i].x = xi[t].x + s;
-    xout[i].y = xi[t].y + s;
-    xout[i].z = xi[t].z + s;
-
-    /*
+    
     while (i < npart) {
         
-        
-
-        i+=off;
-    }*/
-
-    /*
-    while (i < npart) {
-        xout[i].x = xin[i].x;
-        xout[i].y = xin[i].y;
-        xout[i].z = xin[i].z;
         f = 0.0f;
-        dsq = 0.0f;
-        distx = 0.0f;
-        disty = 0.0f;
-        distz = 0.0f;
-        for (int j = 0; j < npart; j++) {
-            distx = xin[i].x - xin[j].x;
-            disty = xin[i].y - xin[j].y;
-            distz = xin[i].z - xin[j].z;
 
-            dsq = distx * distx + disty * disty + distz * distz;
+        *((float4*)(&xi[0]) + t) = *((float4*)(&xin[g * blockDim.x]) + t);
+        
+        for(int ja = 0; ja < npart; ja+= size) {
+            for(int jl = 0; jl < size; jl += blockDim.x){
+                *((float4*)(&xj[jl]) + t) = *((float4*)(&xin[ja + jl]) + t);
+            }
+            __syncthreads();
 
-            if (dsq < maxrad && dsq != 0 && i != j) {
-                f += xin[i].m * xin[j].m * (xin[i].x - xin[j].x) / dsq;
+            for(int j = ja; j < ja + size; j++){
+                distx = xi[t].x - xj[j - ja].x;
+                disty = xi[t].y - xj[j - ja].y;
+                distz = xi[t].z - xj[j - ja].z;
+
+                dsq = distx * distx + disty * disty + distz * distz;
+
+                if (dsq < maxrad && dsq != 0 && i != j) {
+                    f += xi[t].m * xj[j - ja].m * (xi[t].x - xj[j - ja].x) / dsq;
+                }
             }
         }
         double s = f * dt * val;
-        xout[i].x += s;
-        xout[i].y += s;
-        xout[i].z += s;
+        xout[i].x = xi[t].x + s;
+        xout[i].y = xi[t].y + s;
+        xout[i].z = xi[t].z + s;
 
         i+=off;
     }
-    */
 }
 
 
@@ -137,7 +106,7 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
 
     // Set number of threads/blocks
     dim3 block(1024, 1, 1);
-    dim3 threads(1024, 1, 1);
+    dim3 threads(1024, 1024, 64);
 
      // START measure time
     cudaEventRecord(start, 0);
@@ -164,12 +133,6 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
 
     // STOP measure time
     cudaEventRecord(stop, 0);
-
-    int count = 0;
-    while(count < npart){
-        cout << "xout[" << count << "].x: " << xout[count].x << "\n";
-        count++;
-    }
 
     // Calculate time
     cudaEventSynchronize(stop);
