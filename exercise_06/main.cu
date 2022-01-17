@@ -122,7 +122,6 @@ __global__ void wmma_example(half *A, half *B, half *C, float *Cfp, int M, int N
 
             // Perform the matrix multiplication
             wmma::mma_sync(cmacc_frag, cm_frag, ct_frag, cmacc_frag);
-            wmma::store_matrix_sync(Cfp + c_row + c_col * ldc, cmacc_frag, ldc, wmma::mem_col_major);
         }
     }
 
@@ -134,8 +133,9 @@ __global__ void wmma_example(half *A, half *B, half *C, float *Cfp, int M, int N
     if (c_row < M && c_col < N) {
         wmma::load_matrix_sync(c_frag, Cfp + c_row + c_col * ldc, ldc, wmma::mem_col_major);
 
-        for(int i=0; i < c_frag.num_elements; i++) {
-            c_frag.x[i] = alpha * acc_frag.x[i] + beta * c_frag.x[i];
+        // Iterate C x C^T fragment
+        for (int i = 0; i < cmacc_frag.num_elements; i++) {
+            c_frag.x[i] = alpha * acc_frag.x[i] + beta * cmacc_frag.x[i];
         }
 
         // Store the output in C full precision matrix
