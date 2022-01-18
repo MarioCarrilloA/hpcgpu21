@@ -250,12 +250,13 @@ void matrices_computation(int m, int n, int k, float a, float b) {
     gridDim.y = (n + WMMA_N * blockDim.y - 1) / (WMMA_N * blockDim.y);
 
      // Print debug output matrices as python format
-     printf("import numpy as np\n");
+     // UNCOMMENT TO PRINT MATRUCES
+     /*printf("import numpy as np\n");
      printf("alpha=%f\n", alpha);
      printf("beta=%f\n", beta);
      print_fullp_matrix(A_fp32, m, k, "A");
      print_fullp_matrix(B_fp32, k, n, "B");
-     print_fullp_matrix(C_temp, m, n, "C");
+     print_fullp_matrix(C_temp, m, n, "C");*/
 
     // Execute kernel
     checkCudaErrors(cudaEventRecord(startWMMA));
@@ -270,11 +271,12 @@ void matrices_computation(int m, int n, int k, float a, float b) {
     checkCudaErrors(cudaEventDestroy(stopWMMA));
 
     // Print debug output matrices as python format
-    printf("print('Python:________________________')\n");
+    // UNCOMMENT TO PRINT MATRICES
+    /*printf("print('Python:________________________')\n");
     printf("print((alpha * C) + (beta * (A.dot(B))))\n");
     print_fullp_matrix(C_wmma, m, n, "D");
     printf("print('WMMA  :________________________')\n");
-    printf("print(D)\n");
+    printf("print(D)\n");*/
     printf("### WAMM execution: %f seconds\n", (wmmaTime / 1000.0f));
 
     // Free memory
