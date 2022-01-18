@@ -14,10 +14,10 @@
 using namespace std;
 
 struct p {
-    float x;
-    float y;
-    float z;
-    float m;
+    float *x;
+    float *y;
+    float *z;
+    float *m;
 };
 
 static const char help[] =
@@ -28,22 +28,22 @@ static const char help[] =
     "  -p number:     Number of particles to be processed\n"
     "  -h             Prints this help message.\n";
 
-void Print(p *x) {
+void Print(p x) {
     for (int i = 0; i < DEFAULT_NUM_TO_SHOW; i++)
-        cout << x[i].x << endl;
+        cout << x.x[i] << endl;
 }
 
-void init(p *xin, long npart) {
+void init(p xin, long npart) {
     for (int i = 0; i < npart; i++) {
-        xin[i].x = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
-        xin[i].y = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
-        xin[i].z = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
-        xin[i].m = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
+        xin.x[i] = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
+        xin.y[i] = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
+        xin.z[i] = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
+        xin.m[i] = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
     }
 }
 
 // GPU Kernel
-__global__ void kernel(p *xin, p *xout, long int npart, double dt, double val) {
+__global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
@@ -51,50 +51,64 @@ __global__ void kernel(p *xin, p *xout, long int npart, double dt, double val) {
     int maxrad = 1.0;
     float f, dsq;
     float distx, disty, distz;
-    int size = blockDim.x;
+    int size = blockDim.x * 2;
 
-    extern __shared__ p x_shared[];
-    p *xi = &x_shared[0];
-    p *xj = &x_shared[blockDim.x];
+    extern __shared__ float x_shared[];
+    p xi, xj;
+    xi.x = &x_shared[0];
+    xi.y = &x_shared[blockDim.x];
+    xi.z = &x_shared[blockDim.x * 2];
+    xi.m = &x_shared[blockDim.x * 3];
+
+    xj.x = &x_shared[blockDim.x * 4];
+    xj.y = &x_shared[blockDim.x * 6];
+    xj.z = &x_shared[blockDim.x * 8];
+    xj.m = &x_shared[blockDim.x * 10];
 
     while (i < npart) {
 
         f = 0.0f;
 
-        *((float4*)(&xi[0]) + t) = *((float4*)(&xin[g * blockDim.x]) + t);
+        *((float*)(&xi.x[0]) + t) = *((float*)(&xin.x[g * blockDim.x]) + t);
+        *((float*)(&xi.y[0]) + t) = *((float*)(&xin.y[g * blockDim.x]) + t);
+        *((float*)(&xi.z[0]) + t) = *((float*)(&xin.z[g * blockDim.x]) + t);
+        *((float*)(&xi.m[0]) + t) = *((float*)(&xin.m[g * blockDim.x]) + t);
 
         for(int ja = 0; ja < npart; ja+= size) {
             for(int jl = 0; jl < size; jl += blockDim.x){
-                *((float4*)(&xj[jl]) + t) = *((float4*)(&xin[ja + jl]) + t);
+                *((float*)(&xj.x[jl]) + t) = *((float*)(&xin.x[ja + jl]) + t);
+                *((float*)(&xj.y[jl]) + t) = *((float*)(&xin.y[ja + jl]) + t);
+                *((float*)(&xj.z[jl]) + t) = *((float*)(&xin.z[ja + jl]) + t);
+                *((float*)(&xj.m[jl]) + t) = *((float*)(&xin.m[ja + jl]) + t);
             }
             __syncthreads();
 
             for(int j = ja; j < ja + size; j++){
-                distx = xi[t].x - xj[j - ja].x;
-                disty = xi[t].y - xj[j - ja].y;
-                distz = xi[t].z - xj[j - ja].z;
+                distx = xi.x[t] - xj.x[j - ja];
+                disty = xi.y[t] - xj.y[j - ja];
+                distz = xi.z[t] - xj.z[j - ja];
 
                 dsq = distx * distx + disty * disty + distz * distz;
 
                 if (dsq < maxrad && dsq != 0 && i != j) {
-                    f += xi[t].m * xj[j - ja].m * (xi[t].x - xj[j - ja].x) / dsq;
+                    f += xi.m[t] * xj.m[j - ja] * (xi.x[t] - xj.x[j - ja]) / dsq;
                 }
             }
         }
         double s = f * dt * val;
-        xout[i].x = xi[t].x + s;
-        xout[i].y = xi[t].y + s;
-        xout[i].z = xi[t].z + s;
+        xout.x[i] = xi.x[t] + s;
+        xout.y[i] = xi.y[t] + s;
+        xout.z[i] = xi.z[t] + s;
 
         i+=off;
     }
 }
 
 
-void execute_kernel(p *xin, p *xout, int npart, int niters) {
-    p *x_dev;
-    p *xin_dev;
-    p *xout_dev;
+void execute_kernel(p xin, p xout, int npart, int niters) {
+    p x_dev;
+    p xin_dev;
+    p xout_dev;
     float dt = 0.5f;
     float val = 0.5f;
     float execution_time = 0.0f;
@@ -105,21 +119,30 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
     cudaEventCreate(&stop);
 
     // Set number of threads/blocks
-    dim3 block(4096, 1, 1);
+    dim3 block(8192, 1, 1);
     dim3 threads(1024, 1, 1);
 
      // START measure time
     cudaEventRecord(start, 0);
 
     // Memory management
-    checkCudaErrors(cudaMalloc((void **)&xin_dev, sizeof(p) * npart));
-    checkCudaErrors(cudaMalloc((void **)&xout_dev, sizeof(p) * npart));
-    checkCudaErrors(cudaMemcpy(xin_dev, xin, sizeof(p) * npart, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMalloc((void **)&xin_dev.x, sizeof(float) * npart));
+    checkCudaErrors(cudaMalloc((void **)&xin_dev.y, sizeof(float) * npart));
+    checkCudaErrors(cudaMalloc((void **)&xin_dev.z, sizeof(float) * npart));
+    checkCudaErrors(cudaMalloc((void **)&xin_dev.m, sizeof(float) * npart));
+    checkCudaErrors(cudaMalloc((void **)&xout_dev.x, sizeof(float) * npart));
+    checkCudaErrors(cudaMalloc((void **)&xout_dev.y, sizeof(float) * npart));
+    checkCudaErrors(cudaMalloc((void **)&xout_dev.z, sizeof(float) * npart));
+    checkCudaErrors(cudaMalloc((void **)&xout_dev.m, sizeof(float) * npart));
+    checkCudaErrors(cudaMemcpy(xin_dev.x, xin.x, sizeof(float) * npart, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(xin_dev.y, xin.y, sizeof(float) * npart, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(xin_dev.z, xin.z, sizeof(float) * npart, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(xin_dev.m, xin.m, sizeof(float) * npart, cudaMemcpyHostToDevice));
 
     // for dynamic allocation of shared memory
     // Kernel 1 execution
     for (int i = 0; i < niters; i++) {
-        kernel<<<block, threads, sizeof(p) * 1024 * 2>>>(xin_dev, xout_dev, npart, dt, val);
+        kernel<<<block, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
 
         // Exchange pointers
         x_dev = xin_dev;
@@ -127,12 +150,23 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
         xout_dev = x_dev;
     }
 
-    checkCudaErrors(cudaMemcpy(xout, xout_dev, sizeof(p) * npart, cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaFree(xin_dev));
-    checkCudaErrors(cudaFree(xout_dev));
+    checkCudaErrors(cudaMemcpy(xout.x, xout_dev.x, sizeof(float) * npart, cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(xout.y, xout_dev.y, sizeof(float) * npart, cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(xout.z, xout_dev.z, sizeof(float) * npart, cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(xout.m, xout_dev.m, sizeof(float) * npart, cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaFree(xin_dev.x));
+    checkCudaErrors(cudaFree(xin_dev.y));
+    checkCudaErrors(cudaFree(xin_dev.z));
+    checkCudaErrors(cudaFree(xin_dev.m));
+    checkCudaErrors(cudaFree(xout_dev.x));
+    checkCudaErrors(cudaFree(xout_dev.y));
+    checkCudaErrors(cudaFree(xout_dev.z));
+    checkCudaErrors(cudaFree(xout_dev.m));
 
     // STOP measure time
     cudaEventRecord(stop, 0);
+
+    Print(xout);
 
     // Calculate time
     cudaEventSynchronize(stop);
@@ -142,12 +176,27 @@ void execute_kernel(p *xin, p *xout, int npart, int niters) {
 
 
 int exercise04(int npart, int niters) {
-    p *xin = (p *)malloc(sizeof(p) * npart);
-    p *xout = (p *)malloc(sizeof(p) * npart);
+    p xin, xout;
+
+    xin.x = (float*)malloc(sizeof(float) * npart);
+    xin.y = (float*)malloc(sizeof(float) * npart);
+    xin.z = (float*)malloc(sizeof(float) * npart);
+    xin.m = (float*)malloc(sizeof(float) * npart);
+
+    xout.x = (float*)malloc(sizeof(float) * npart);
+    xout.y = (float*)malloc(sizeof(float) * npart);
+    xout.z = (float*)malloc(sizeof(float) * npart);
+    xout.m = (float*)malloc(sizeof(float) * npart);
     init(xin, npart);
     execute_kernel(xin, xout, npart, niters);
-    free(xin);
-    free(xout);
+    free(xin.x);
+    free(xin.y);
+    free(xin.z);
+    free(xin.m);
+    free(xout.x);
+    free(xout.y);
+    free(xout.z);
+    free(xout.m);
 
     return 0;
 }
