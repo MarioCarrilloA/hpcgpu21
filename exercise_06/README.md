@@ -1,4 +1,4 @@
-## Exercise 07
+## Exercise 06
 
 Instrcutions to build & run
 
