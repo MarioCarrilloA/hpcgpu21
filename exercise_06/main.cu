@@ -62,7 +62,7 @@ cout << "])" << endl;
 
 
 // WMMA kernel
-__global__ void wmma_example(half *A, half *B, float *C, int M, int N, int K, float alpha, float beta) {
+__global__ void wmma_example(half *A, half *B, float *C_wmma, int M, int N, int K, float alpha, float beta) {
     // Leading dimensions. Packed with no transpositions.
     int lda = M;
     int ldb = K;
@@ -103,14 +103,14 @@ __global__ void wmma_example(half *A, half *B, float *C, int M, int N, int K, fl
     int c_col = warpN * WMMA_N;
 
     if (c_row < M && c_col < N) {
-        wmma::load_matrix_sync(c_frag, C + c_row + c_col * ldc, ldc, wmma::mem_col_major);
+        wmma::load_matrix_sync(c_frag, C_wmma + c_row + c_col * ldc, ldc, wmma::mem_col_major);
 
         for(int i=0; i < c_frag.num_elements; i++) {
             c_frag.x[i] = alpha * acc_frag.x[i] + beta * c_frag.x[i];
         }
 
         // Store the output
-        wmma::store_matrix_sync(C + c_row + c_col * ldc, c_frag, ldc, wmma::mem_col_major);
+        wmma::store_matrix_sync(C_wmma + c_row + c_col * ldc, c_frag, ldc, wmma::mem_col_major);
     }
 }
 
