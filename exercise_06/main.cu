@@ -10,9 +10,9 @@
 #include <helper_cuda.h>
 #include "cublas_v2.h"
 
-#define DEFAULT_MATRIX_M     32
-#define DEFAULT_MATRIX_N     32
-#define DEFAULT_MATRIX_K     32
+#define DEFAULT_MATRIX_M     16
+#define DEFAULT_MATRIX_N     16
+#define DEFAULT_MATRIX_K     16
 #define DEFAULT_ALPHA        3.0
 #define DEFAULT_BETA         1.0
 
@@ -220,19 +220,20 @@ void matrices_computation(int m, int n, int k, float a, float b) {
     wmma_example <<< gridDim, blockDim >>> (A_fp16, B_fp16, C_wmma, m, n, k, alpha, beta);
     checkCudaErrors(cudaEventRecord(stopWMMA));
 
-    // Print debug output matrices as python format
-    printf("print('Python:________________________')\n");
-    printf("print((alpha * C) + (beta * (A.dot(B))))\n");
-    print_fullp_matrix(C_wmma, m, n, "D");
-    printf("print('WMMA  :________________________')\n");
-    printf("print(D)\n");
-
     // Measure time
     float wmmaTime;
     checkCudaErrors(cudaEventSynchronize(stopWMMA));
     checkCudaErrors(cudaEventElapsedTime(&wmmaTime, startWMMA, stopWMMA));
     checkCudaErrors(cudaEventDestroy(startWMMA));
     checkCudaErrors(cudaEventDestroy(stopWMMA));
+
+    // Print debug output matrices as python format
+    printf("print('Python:________________________')\n");
+    printf("print((alpha * C) + (beta * (A.dot(B))))\n");
+    print_fullp_matrix(C_wmma, m, n, "D");
+    printf("print('WMMA  :________________________')\n");
+    printf("print(D)\n");
+    printf("### WAMM execution: %f seconds\n", (wmmaTime / 1000.0f));
 
     // Free memory
     checkCudaErrors(cudaFree(A_fp32));
