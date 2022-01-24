@@ -10,8 +10,8 @@
 #include <helper_cuda.h>
 #include "cublas_v2.h"
 
-#define DEFAULT_MATRIX_M 4
-#define DEFAULT_MATRIX_N 4
+#define DEFAULT_MATRIX_M 1024
+#define DEFAULT_MATRIX_N 2536
 
 using std::cout;
 using std::endl;
@@ -50,18 +50,17 @@ cout << "])" << endl;
     free(A_host);
 }
 
-
 // Vector/Matrix multiplication  kernel
 __global__ void mm_kernel(float *A, float *x, float *y, int m, int n) {
     extern __shared__ float sharedArr[];
-    float* psum = &sharedArr[0];
-    float* xi = &sharedArr[n];
+    float* xi = (float*)&sharedArr[0];
+    float* psum = (float*)&xi[m];
 
     // partial sum per thread
     for (int i = threadIdx.x; i < m; i+=blockDim.x) {
         // load x to shared memory to prevent reload of x
-        *((float*)(&xi[0]) + i) = *((float*)(&x[blockIdx.x * blockDim.x]) + i);
-
+        *((float*)(&xi[0]) + i) = *((float*)(&x[0]) + i);
+ 
         int g = i + (blockIdx.x * m);
         psum[threadIdx.x] = xi[i] * A[g];
     }
@@ -74,9 +73,8 @@ __global__ void mm_kernel(float *A, float *x, float *y, int m, int n) {
     while (off > 31) {
         if(threadIdx.x<off) {
             psum[threadIdx.x]+=psum[threadIdx.x+off];
-            off/=2;
         }
-
+        off/=2;
         // 1/2 no of threads involved
         __syncthreads();
     }
@@ -159,7 +157,7 @@ void vec_mtx_computation(int m, int n) {
 
     checkCudaErrors(cudaEventRecord(start));
     printf("#START KERNEL!!!\n");
-    mm_kernel<<<blocks, threads, (n+m) * sizeof(float)>>>(A_dev, x_dev, y_dev, m, n);
+    mm_kernel<<<blocks, threads, (m + m) * sizeof(float)>>>(A_dev, x_dev, y_dev, m, n);
     printf("#END KERNEL!!!\n");
     checkCudaErrors(cudaEventRecord(stop));
 
