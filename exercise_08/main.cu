@@ -60,7 +60,7 @@ __global__ void mm_kernel(float *A, float *x, float *y, int m, int n) {
     for (int i = threadIdx.x; i < m; i+=blockDim.x) {
         // load x to shared memory to prevent reload of x
         *((float*)(&xi[0]) + i) = *((float*)(&x[0]) + i);
- 
+
         int g = i + (blockIdx.x * m);
         psum[threadIdx.x] = xi[i] * A[g];
     }
@@ -74,8 +74,9 @@ __global__ void mm_kernel(float *A, float *x, float *y, int m, int n) {
         if(threadIdx.x<off) {
             psum[threadIdx.x]+=psum[threadIdx.x+off];
         }
-        off/=2;
         // 1/2 no of threads involved
+        off/=2;
+
         __syncthreads();
     }
 
@@ -145,20 +146,19 @@ void vec_mtx_computation(int m, int n) {
     checkCudaErrors(cudaMemcpy(A_dev, A_host, m * n * sizeof(float), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(x_dev, x_host, m * sizeof(float), cudaMemcpyHostToDevice));
 
-    // Print debug output matrices as python format
-    // UNCOMMENT TO PRINT MATRICES & VECTOR
-    printf("import numpy as np\n");
-    print_mmv(A_dev, m, n, "A");
-    print_mmv(x_dev, 1, m, "x");
+    // PART 1. UNCOMMENT TO PRINT MATRICES & VECTOR
+    // This section prrint debug output matrices as python format.
+    // -----------------------------------------------------------
+    //printf("import numpy as np\n");
+    //print_mmv(A_dev, m, n, "A");
+    //print_mmv(x_dev, 1, m, "x");
 
     // Set number of threads/blocks
     dim3 blocks(n, 1, 1);
     dim3 threads(m, 1, 1);
 
     checkCudaErrors(cudaEventRecord(start));
-    printf("#START KERNEL!!!\n");
     mm_kernel<<<blocks, threads, (m + m) * sizeof(float)>>>(A_dev, x_dev, y_dev, m, n);
-    printf("#END KERNEL!!!\n");
     checkCudaErrors(cudaEventRecord(stop));
 
     // Measure time
@@ -168,14 +168,17 @@ void vec_mtx_computation(int m, int n) {
     checkCudaErrors(cudaEventDestroy(start));
     checkCudaErrors(cudaEventDestroy(stop));
 
-    // Print debug output matrices as python format
-    // UNCOMMENT TO PRINT MATRICES
-    printf("print('Python:________________________')\n");
-    printf("print(x.dot(A))\n");
-    print_mmv(y_dev, 1, n, "y");
-    printf("print('CUDA MULT:________________________')\n");
-    printf("print(y)\n");
-    printf("### WAMM execution: %f seconds\n", (execution_time / 1000.0f));
+    // PART 2. UNCOMMENT TO PRINT MATRICES & VECTOR
+    // This section prrint debug output matrices as python format.
+    // -----------------------------------------------------------
+    //printf("print('Python:________________________')\n");
+    //printf("print(x.dot(A))\n");
+    //print_mmv(y_dev, 1, n, "y");
+    //printf("print('CUDA MULT:________________________')\n");
+    //printf("print(y)\n");
+
+    // Print execution time
+    printf("### WAMM execution: %f milliseconds\n", (execution_time));
 
     // Free memory
     checkCudaErrors(cudaFree(A_dev));
