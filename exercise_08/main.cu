@@ -17,7 +17,7 @@ using std::cout;
 using std::endl;
 using std::setprecision;
 using namespace std;
-using namespace nvcuda;
+//using namespace nvcuda;
 
 constexpr int FLOAT_MIN = -1.0;
 constexpr int FLOAT_MAX = 1.0;
@@ -71,8 +71,9 @@ __global__ void mm_kernel(float *A, float *x, float *y, int m, int n) {
 
     // start with 1/2 #threads
     while (off > 31) {
-        if(threadIdx.x<off) {
-            psum[threadIdx.x]+=psum[threadIdx.x+off];
+        //printf("#INSIDE WHILE");
+        if(threadIdx.x < off) {
+            psum[threadIdx.x] += psum[threadIdx.x+off];
         }
         // 1/2 no of threads involved
         off/=2;
@@ -81,19 +82,28 @@ __global__ void mm_kernel(float *A, float *x, float *y, int m, int n) {
     }
 
     // Finalizing the last warp - No loop, no overhead, no __syncthreads in single warp
-    if(threadIdx.x < 16)
-        psum[threadIdx.x] += psum[threadIdx.x+16];
-    if(threadIdx.x < 8)
-        psum[threadIdx.x] += psum[threadIdx.x+8];
-    if(threadIdx.x < 4)
-        psum[threadIdx.x] += psum[threadIdx.x+4];
-    if(threadIdx.x < 2)
-        psum[threadIdx.x] += psum[threadIdx.x+2];
+    if(threadIdx.x < 16) {
+        __syncwarp();
+        psum[threadIdx.x] += psum[threadIdx.x + 16];
+    }
+    if(threadIdx.x < 8) {
+        __syncwarp();
+        psum[threadIdx.x] += psum[threadIdx.x + 8];
+    }
+    if(threadIdx.x < 4) {
+        __syncwarp();
+        psum[threadIdx.x] += psum[threadIdx.x + 4];
+    }
+    if(threadIdx.x < 2) {
+        __syncwarp();
+        psum[threadIdx.x] += psum[threadIdx.x + 2];
+    }
     if(threadIdx.x < 1) {
-        psum[threadIdx.x] += psum[threadIdx.x+1];
+        __syncwarp();
+        psum[threadIdx.x] += psum[threadIdx.x + 1];
     }
 
-    y[blockIdx.x] += psum[threadIdx.x];
+    y[blockIdx.x] = psum[threadIdx.x];
 }
 
 
@@ -149,9 +159,9 @@ void vec_mtx_computation(int m, int n) {
     // PART 1. UNCOMMENT TO PRINT MATRICES & VECTOR
     // This section prrint debug output matrices as python format.
     // -----------------------------------------------------------
-    //printf("import numpy as np\n");
-    //print_mmv(A_dev, m, n, "A");
-    //print_mmv(x_dev, 1, m, "x");
+    printf("import numpy as np\n");
+    print_mmv(A_dev, m, n, "A");
+    print_mmv(x_dev, 1, m, "x");
 
     // Set number of threads/blocks
     dim3 blocks(n, 1, 1);
@@ -171,11 +181,11 @@ void vec_mtx_computation(int m, int n) {
     // PART 2. UNCOMMENT TO PRINT MATRICES & VECTOR
     // This section prrint debug output matrices as python format.
     // -----------------------------------------------------------
-    //printf("print('Python:________________________')\n");
-    //printf("print(x.dot(A))\n");
-    //print_mmv(y_dev, 1, n, "y");
-    //printf("print('CUDA MULT:________________________')\n");
-    //printf("print(y)\n");
+    printf("print('Python:________________________')\n");
+    printf("print(x.dot(A))\n");
+    print_mmv(y_dev, 1, n, "y");
+    printf("print('CUDA MULT:________________________')\n");
+    printf("print(y)\n");
 
     // Print execution time
     printf("### WAMM execution: %f milliseconds\n", (execution_time));
