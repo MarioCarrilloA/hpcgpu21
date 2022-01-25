@@ -17,7 +17,6 @@ using std::cout;
 using std::endl;
 using std::setprecision;
 using namespace std;
-//using namespace nvcuda;
 
 constexpr int FLOAT_MIN = -1.0;
 constexpr int FLOAT_MAX = 1.0;
@@ -156,13 +155,6 @@ void vec_mtx_computation(int m, int n) {
     checkCudaErrors(cudaMemcpy(A_dev, A_host, m * n * sizeof(float), cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(x_dev, x_host, m * sizeof(float), cudaMemcpyHostToDevice));
 
-    // PART 1. UNCOMMENT TO PRINT MATRICES & VECTOR
-    // This section prrint debug output matrices as python format.
-    // -----------------------------------------------------------
-    printf("import numpy as np\n");
-    print_mmv(A_dev, m, n, "A");
-    print_mmv(x_dev, 1, m, "x");
-
     // Set number of threads/blocks
     dim3 blocks(n, 1, 1);
     dim3 threads(m, 1, 1);
@@ -178,14 +170,20 @@ void vec_mtx_computation(int m, int n) {
     checkCudaErrors(cudaEventDestroy(start));
     checkCudaErrors(cudaEventDestroy(stop));
 
-    // PART 2. UNCOMMENT TO PRINT MATRICES & VECTOR
-    // This section prrint debug output matrices as python format.
+    // *** UNCOMMENT THE LINE BLOCK BELOW TO PRINT RESULTS ***
+    // This section print debug output matrices as python format.
+    // So we can use the output of sbatch as python script.
     // -----------------------------------------------------------
+    /*
+    printf("import numpy as np\n");
+    print_mmv(A_dev, m, n, "A");
+    print_mmv(x_dev, 1, m, "x");
     printf("print('Python:________________________')\n");
     printf("print(x.dot(A))\n");
     print_mmv(y_dev, 1, n, "y");
     printf("print('CUDA MULT:________________________')\n");
     printf("print(y)\n");
+    */
 
     // Print execution time
     printf("### WAMM execution: %f milliseconds\n", (execution_time));
