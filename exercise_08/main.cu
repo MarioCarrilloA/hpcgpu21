@@ -179,10 +179,17 @@ void vec_mtx_computation(int m, int n) {
     print_mmv(A_dev, m, n, "A");
     print_mmv(x_dev, 1, m, "x");
     printf("print('Python:________________________')\n");
-    printf("print(x.dot(A))\n");
+    printf("p = x.dot(A)\n");
+    printf("print(p)\n");
     print_mmv(y_dev, 1, n, "y");
     printf("print('CUDA MULT:________________________')\n");
     printf("print(y)\n");
+    printf("print('-----------------------------------')\n");
+    printf("print('*** Compare 2 arrays with np.allclose() ***')\n");
+    printf("rtol = 1e-04\n");
+    printf("atol = 1e-03\n");
+    printf("print('All are close?')\n");
+    printf("print(np.allclose(p, y, rtol, atol))");
     */
 
     // Print execution time
