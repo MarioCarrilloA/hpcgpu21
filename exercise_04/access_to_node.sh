@@ -11,4 +11,3 @@ rhrk-launch \
     --jobslot 1  \
     --gpu $GPU  \
     --time 30 \
-    --mode vgl
