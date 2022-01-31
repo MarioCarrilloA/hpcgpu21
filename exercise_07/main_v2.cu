@@ -48,55 +48,64 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
+    int m = 2;
+    int size = m * blockDim.x;
     float maxrad = 0.9f;
     float f = 0.0;
+
+    // distance vars
     float dsq;
-    float distx, disty, distz;
-    int size = blockDim.x * 2;
+    float dstx;
+    float dsty;
+    float dstz;
 
     extern __shared__ float x_shared[];
-    p xi, xj;
-    xi.x = &x_shared[0];
-    xi.y = &x_shared[blockDim.x];
-    xi.z = &x_shared[blockDim.x * 2];
-    xi.m = &x_shared[blockDim.x * 3];
+    p xj_shared;
 
-    xj.x = &x_shared[blockDim.x * 4];
-    xj.y = &x_shared[blockDim.x * 6];
-    xj.z = &x_shared[blockDim.x * 8];
-    xj.m = &x_shared[blockDim.x * 10];
+    // Split shared memry
+    xj_shared.x = &x_shared[0];
+    xj_shared.y = &x_shared[blockDim.x * 2];
+    xj_shared.z = &x_shared[blockDim.x * 4];
+    xj_shared.m = &x_shared[blockDim.x * 8];
 
     if (i < npart) {
-        *((float*)(&xi.x[0]) + t) = *((float*)(&xin.x[g * blockDim.x]) + t);
-        *((float*)(&xi.y[0]) + t) = *((float*)(&xin.y[g * blockDim.x]) + t);
-        *((float*)(&xi.z[0]) + t) = *((float*)(&xin.z[g * blockDim.x]) + t);
-        *((float*)(&xi.m[0]) + t) = *((float*)(&xin.m[g * blockDim.x]) + t);
+        xout.x[i] = xin.x[i];
+        xout.y[i] = xin.y[i];
+        xout.z[i] = xin.z[i];
 
-        for(int ja = 0; ja < npart; ja+= size) {
-            for(int jl = 0; jl < size; jl += blockDim.x){
-                *((float*)(&xj.x[jl]) + t) = *((float*)(&xin.x[ja + jl]) + t);
-                *((float*)(&xj.y[jl]) + t) = *((float*)(&xin.y[ja + jl]) + t);
-                *((float*)(&xj.z[jl]) + t) = *((float*)(&xin.z[ja + jl]) + t);
-                *((float*)(&xj.m[jl]) + t) = *((float*)(&xin.m[ja + jl]) + t);
+        for(int ja = 0; ja < npart; ja+=size) {
+
+            // compute particles according to block size multiplier
+            for(int jl = 0; jl < size/blockDim.x; jl += blockDim.x) {
+                int jdx = jl + t;
+                int idx = ja + jl + t;
+
+                // Copy to shared memory
+                xj_shared.x[jdx] = xin.x[idx];
+                xj_shared.y[jdx] = xin.y[idx];
+                xj_shared.z[jdx] = xin.z[idx];
+                xj_shared.m[jdx] = xin.m[idx];
             }
             __syncthreads();
 
             for(int j = ja; j < ja + size; j++){
-                distx = xi.x[t] - xj.x[j - ja];
-                disty = xi.y[t] - xj.y[j - ja];
-                distz = xi.z[t] - xj.z[j - ja];
+                dstx = xin.x[t] - xj_shared.x[j - ja];
+                dsty = xin.y[t] - xj_shared.y[j - ja];
+                dstz = xin.z[t] - xj_shared.z[j - ja];
 
-                dsq = distx * distx + disty * disty + distz * distz;
+                // Compute distance
+                dsq = (dstx * dstx) + (dsty * dsty) + (dstz * dstz);
 
                 if (dsq < maxrad && dsq != 0 && i != j) {
-                    f += xi.m[t] * xj.m[j - ja] * (xi.x[t] - xj.x[j - ja]) / dsq;
+                    f += xin.m[t] * xj_shared.m[j - ja] * (xin.x[t] - xj_shared.x[j - ja]) / dsq;
                 }
             }
         }
-        double s = f * dt * val;
-        xout.x[i] = xi.x[t] + s;
-        xout.y[i] = xi.y[t] + s;
-        xout.z[i] = xi.z[t] + s;
+
+        float s = f * dt * val;
+        xout.x[i] = xin.x[t] + s;
+        xout.y[i] = xin.y[t] + s;
+        xout.z[i] = xin.z[t] + s;
     }
 }
 
