@@ -8,7 +8,7 @@
 #include <sys/time.h>
 
 #define DEFAULT_NUM_ITERATIONS 1000
-#define DEFAULT_NUM_PARTICLES  1000000
+#define DEFAULT_NUM_PARTICLES  80000
 #define DEFAULT_NUM_TO_SHOW    10
 
 using namespace std;
@@ -21,7 +21,7 @@ struct p {
 };
 
 static const char help[] =
-    "Usage: exercise01 [-k number] [-i number] [-p number] [-h]\n"
+    "Usage: exercise07 [-k number] [-i number] [-p number] [-h]\n"
     "Description:\n"
     "  -i number:     Specifies how many times the kernel will be\n"
     "                 executed.\n"
@@ -47,7 +47,6 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
-    int off = gridDim.x * blockDim.x;
     int maxrad = 1.0;
     float f, dsq;
     float distx, disty, distz;
@@ -65,7 +64,7 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
     xj.z = &x_shared[blockDim.x * 8];
     xj.m = &x_shared[blockDim.x * 10];
 
-    while (i < npart) {
+    if (i < npart) {
 
         f = 0.0f;
 
@@ -99,8 +98,6 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
         xout.x[i] = xi.x[t] + s;
         xout.y[i] = xi.y[t] + s;
         xout.z[i] = xi.z[t] + s;
-
-        i+=off;
     }
 }
 
@@ -166,7 +163,7 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     // STOP measure time
     cudaEventRecord(stop, 0);
 
-    Print(xout);
+    //Print(xout);
 
     // Calculate time
     cudaEventSynchronize(stop);
