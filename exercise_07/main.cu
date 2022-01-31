@@ -10,6 +10,7 @@
 #define DEFAULT_NUM_ITERATIONS 1000
 #define DEFAULT_NUM_PARTICLES  80000
 #define DEFAULT_NUM_TO_SHOW    10
+#define MAX_THREADS_PER_BLOCK 1024
 
 using namespace std;
 
@@ -115,11 +116,34 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    // Set number of threads/blocks
-    dim3 block(8192, 1, 1);
-    dim3 threads(1024, 1, 1);
+    // Calculate blocks & threads
+    int minimum_blocks;
+    int minimum_threads;
+    int extra_block;
+    int total_blocks;
 
-     // START measure time
+    // Minimum number of blocks/threads calculation
+    if (npart < MAX_THREADS_PER_BLOCK) {
+        minimum_blocks = 1;
+        minimum_threads = npart;
+    } else {
+        minimum_blocks = npart / MAX_THREADS_PER_BLOCK;
+        minimum_threads = MAX_THREADS_PER_BLOCK;
+    }
+
+    // Extra block calculation
+    if (npart % MAX_THREADS_PER_BLOCK == 0 || npart < MAX_THREADS_PER_BLOCK)
+        extra_block = 0;
+    else
+        extra_block = 1;
+
+    total_blocks = minimum_blocks + extra_block;
+    dim3 blocks(total_blocks, 1, 1);
+    dim3 threads(minimum_threads, 1, 1);
+    printf("Blocks:%d   Threads:%d\n", total_blocks, minimum_threads);
+    printf( "Executing ...\n");
+
+    // START measure time
     cudaEventRecord(start, 0);
 
     // Memory management
@@ -139,7 +163,7 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     // for dynamic allocation of shared memory
     // Kernel 1 execution
     for (int i = 0; i < niters; i++) {
-        kernel<<<block, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
+        kernel<<<blocks, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
 
         // Exchange pointers
         x_dev = xin_dev;
@@ -227,7 +251,6 @@ int main(int argc, char **argv) {
 
     cout << "Particles: " << npart << endl;
     cout << "Iterations: " << niters << endl;
-    cout << "Executing ..." << endl;
     exercise04(npart, niters);
 
     return 0;
