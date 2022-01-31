@@ -48,8 +48,9 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
-    int maxrad = 1.0;
-    float f, dsq;
+    float maxrad = 0.9f;
+    float f = 0.0;
+    float dsq;
     float distx, disty, distz;
     int size = blockDim.x * 2;
 
@@ -66,9 +67,6 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
     xj.m = &x_shared[blockDim.x * 10];
 
     if (i < npart) {
-
-        f = 0.0f;
-
         *((float*)(&xi.x[0]) + t) = *((float*)(&xin.x[g * blockDim.x]) + t);
         *((float*)(&xi.y[0]) + t) = *((float*)(&xin.y[g * blockDim.x]) + t);
         *((float*)(&xi.z[0]) + t) = *((float*)(&xin.z[g * blockDim.x]) + t);
