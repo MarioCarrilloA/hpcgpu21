@@ -103,9 +103,9 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
         }
 
         float s = f * dt * val;
-        xout.x[i] = xin.x[t] + s;
-        xout.y[i] = xin.y[t] + s;
-        xout.z[i] = xin.z[t] + s;
+        xout.x[i] += s;
+        xout.y[i] += s;
+        xout.z[i] += s;
     }
 }
 

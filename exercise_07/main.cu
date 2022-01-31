@@ -94,9 +94,9 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
             }
         }
         double s = f * dt * val;
-        xout.x[i] = xi.x[t] + s;
-        xout.y[i] = xi.y[t] + s;
-        xout.z[i] = xi.z[t] + s;
+        xout.x[i] += s;
+        xout.y[i] += s;
+        xout.z[i] += s;
     }
 }
 
