@@ -17,6 +17,12 @@
 
 using namespace std;
 
+struct results {
+    float E;
+    float val;
+    float dt;
+};
+
 static const char help[] =
     "Usage: exercise09 [-k number] [-i number] [-p number] [-h]\n"
     "Description:\n"
@@ -39,12 +45,21 @@ void init(p xin, long npart) {
     }
 }
 
+float max_mass(p x, long npart) {
+    float maxm = 0.0;
+    for (int i = 0; i < npart; i++) {
+        if (x.m[i] > maxm) {
+            maxm = x.m[i];
+        }
+    }
+
+    return maxm;
+}
+
 void execute_kernel(p xin, p xout, int npart, int niters) {
     p x_dev;
     p xin_dev;
     p xout_dev;
-    float dt = 0.5f;
-    float val = 0.5f;
     float execution_time = 0.0f;
 
     // Structures to measure time
@@ -93,21 +108,31 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     checkCudaErrors(cudaMemcpy(xin_dev.z, xin.z, sizeof(float) * npart, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(xin_dev.m, xin.m, sizeof(float) * npart, cudaMemcpyHostToDevice));
 
-    // START measure time
-    cudaEventRecord(start, 0);
+    // CPU results array
+    results r[niters];
+
+    // Stuff for kernel 1
+    // #########################################################################
+    float dt = 0.5f;
+    float val = 0.5f;
 
     // Stuff for kernel 2
     // #########################################################################
     float *F;
     float *F_dev;
-    int M = 1000;
+
+    // Find max mass in particles
+    float maxm = max_mass(xin, npart);
+    float M = maxm * 1000;
 
     F = (float*)malloc(sizeof(float));
     *F = 0.0f;
     checkCudaErrors(cudaMalloc((void **)&F_dev, sizeof(float)));
     checkCudaErrors(cudaMemcpy(F_dev, F, sizeof(float), cudaMemcpyHostToDevice));
-    // #########################################################################
 
+
+    // Stuff for kernel 3
+    // #########################################################################
     float *E;
     float *E_dev;
 
@@ -116,30 +141,58 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     checkCudaErrors(cudaMalloc((void **)&E_dev, sizeof(float)));
     checkCudaErrors(cudaMemcpy(E_dev, E, sizeof(float), cudaMemcpyHostToDevice));
 
+    // START measure time
+    cudaEventRecord(start, 0);
 
+    // Kernel 2 - execution, calculate F
+    kernel2<<<blocks, threads, 1024 * sizeof(float)>>>(xin_dev, F_dev, npart, M);
+    cudaDeviceSynchronize();
 
-
-
+    // Adjust val, dt
+    checkCudaErrors(cudaMemcpy(F, F_dev, sizeof(float), cudaMemcpyDeviceToHost));
+    val = *F;
+    if ((val * dt) < 10.0f) {
+        dt = dt * 0.1f;
+    }
 
     // Kernel execution
     for (int i = 0; i < niters; i++) {
-        // Kernel 1 - execution
+        // Kernel 1 - execution, exercise 04/07
         kernel1<<<blocks, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
+        cudaDeviceSynchronize();
 
-        // Kernel 2 - execution
+        // Kernel 2 - execution, calculate F
         kernel2<<<blocks, threads, 1024 * sizeof(float)>>>(xin_dev, F_dev, npart, M);
+        cudaDeviceSynchronize();
+
+        // Adjust val, dt
+        checkCudaErrors(cudaMemcpy(F, F_dev, sizeof(float), cudaMemcpyDeviceToHost));
+        val = *F;
+        if ((val * dt) < 10.0f) {
+            dt = dt * 0.1f;
+        }
 
         // Exchange pointers
         x_dev = xin_dev;
         xin_dev = xout_dev;
         xout_dev = x_dev;
 
-        // Kerne 3 - execution  (NOW  / OLD)
+        // Kernel 3 - execution  (NOW  / OLD), calculate E
         kernel3<<<blocks, threads, 1024 * sizeof(float)>>>(xout_dev, xin_dev, E_dev, npart);
+        cudaDeviceSynchronize();
+
+        // Store values
+        checkCudaErrors(cudaMemcpy(E, E_dev, sizeof(float), cudaMemcpyDeviceToHost));
+        r[i].E = *E;
+        r[i].dt = dt;
+        r[i].val = val;
     }
 
     // STOP measure time
     cudaEventRecord(stop, 0);
+
+    // This just to hide a warning
+    dt = r[npart - 1].dt;
 
     // Copy data from GPU to CPU to show results
     checkCudaErrors(cudaMemcpy(xout.x, xout_dev.x, sizeof(float) * npart, cudaMemcpyDeviceToHost));
