@@ -7,19 +7,15 @@
 #include <helper_cuda.h>
 #include <sys/time.h>
 
+// Local headers
+#include <kernels.h>
+
 #define DEFAULT_NUM_ITERATIONS 1000
 #define DEFAULT_NUM_PARTICLES  80000
 #define DEFAULT_NUM_TO_SHOW    10
 #define MAX_THREADS_PER_BLOCK 1024
 
 using namespace std;
-
-struct p {
-    float *x;
-    float *y;
-    float *z;
-    float *m;
-};
 
 static const char help[] =
     "Usage: exercise09 [-k number] [-i number] [-p number] [-h]\n"
@@ -42,73 +38,6 @@ void init(p xin, long npart) {
         xin.m[i] = (float(rand())/float((RAND_MAX)) * 10.0f) + 0.1f;
     }
 }
-
-// GPU Kernel
-__global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
-    int t = threadIdx.x;
-    int g = blockIdx.x;
-    int i = t + g * blockDim.x;
-    int m = 2;
-    int size = m * blockDim.x;
-    float maxrad = 0.9f;
-    float f = 0.0;
-
-    // distance vars
-    float dsq;
-    float dstx;
-    float dsty;
-    float dstz;
-
-    extern __shared__ float x_shared[];
-    p xj_shared;
-
-    // Split shared memry
-    xj_shared.x = &x_shared[0];
-    xj_shared.y = &x_shared[blockDim.x * 2];
-    xj_shared.z = &x_shared[blockDim.x * 4];
-    xj_shared.m = &x_shared[blockDim.x * 8];
-
-    if (i < npart) {
-        xout.x[i] = xin.x[i];
-        xout.y[i] = xin.y[i];
-        xout.z[i] = xin.z[i];
-
-        for(int ja = 0; ja < npart; ja+=size) {
-
-            // compute particles according to block size multiplier
-            for(int jl = 0; jl < size/blockDim.x; jl += blockDim.x) {
-                int jdx = jl + t;
-                int idx = ja + jl + t;
-
-                // Copy to shared memory
-                xj_shared.x[jdx] = xin.x[idx];
-                xj_shared.y[jdx] = xin.y[idx];
-                xj_shared.z[jdx] = xin.z[idx];
-                xj_shared.m[jdx] = xin.m[idx];
-            }
-            __syncthreads();
-
-            for(int j = ja; j < ja + size; j++){
-                dstx = xin.x[t] - xj_shared.x[j - ja];
-                dsty = xin.y[t] - xj_shared.y[j - ja];
-                dstz = xin.z[t] - xj_shared.z[j - ja];
-
-                // Compute distance
-                dsq = (dstx * dstx) + (dsty * dsty) + (dstz * dstz);
-
-                if (dsq < maxrad && dsq != 0 && i != j) {
-                    f += xin.m[t] * xj_shared.m[j - ja] * (xin.x[t] - xj_shared.x[j - ja]) / dsq;
-                }
-            }
-        }
-
-        float s = f * dt * val;
-        xout.x[i] += s;
-        xout.y[i] += s;
-        xout.z[i] += s;
-    }
-}
-
 
 void execute_kernel(p xin, p xout, int npart, int niters) {
     p x_dev;
@@ -170,7 +99,7 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     // for dynamic allocation of shared memory
     // Kernel 1 execution
     for (int i = 0; i < niters; i++) {
-        kernel<<<blocks, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
+        kernel1<<<blocks, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
 
         // Exchange pointers
         x_dev = xin_dev;
@@ -203,7 +132,7 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
 }
 
 
-int exercise04(int npart, int niters) {
+int exercise09(int npart, int niters) {
     p xin, xout;
 
     xin.x = (float*)malloc(sizeof(float) * npart);
@@ -258,7 +187,7 @@ int main(int argc, char **argv) {
 
     cout << "Particles: " << npart << endl;
     cout << "Iterations: " << niters << endl;
-    exercise04(npart, niters);
+    exercise09(npart, niters);
 
     return 0;
 }
