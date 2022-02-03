@@ -80,7 +80,7 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     printf( "Executing ...\n");
 
     // START measure time
-    cudaEventRecord(start, 0);
+    //cudaEventRecord(start, 0);
 
     // Memory management
     checkCudaErrors(cudaMalloc((void **)&xin_dev.x, sizeof(float) * npart));
@@ -96,8 +96,12 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     checkCudaErrors(cudaMemcpy(xin_dev.z, xin.z, sizeof(float) * npart, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(xin_dev.m, xin.m, sizeof(float) * npart, cudaMemcpyHostToDevice));
 
-    // for dynamic allocation of shared memory
-    // Kernel 1 execution
+
+
+    /// START measure time
+    cudaEventRecord(start, 0);
+
+    // Kernel execution
     for (int i = 0; i < niters; i++) {
         kernel1<<<blocks, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
 
@@ -107,6 +111,10 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
         xout_dev = x_dev;
     }
 
+    // STOP measure time
+    cudaEventRecord(stop, 0);
+
+    // Copy data from GPU to CPU to show results
     checkCudaErrors(cudaMemcpy(xout.x, xout_dev.x, sizeof(float) * npart, cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaMemcpy(xout.y, xout_dev.y, sizeof(float) * npart, cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaMemcpy(xout.z, xout_dev.z, sizeof(float) * npart, cudaMemcpyDeviceToHost));
@@ -119,9 +127,6 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     checkCudaErrors(cudaFree(xout_dev.y));
     checkCudaErrors(cudaFree(xout_dev.z));
     checkCudaErrors(cudaFree(xout_dev.m));
-
-    // STOP measure time
-    cudaEventRecord(stop, 0);
 
     //Print(xout);
 
