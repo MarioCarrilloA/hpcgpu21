@@ -108,6 +108,19 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     checkCudaErrors(cudaMemcpy(F_dev, F, sizeof(float), cudaMemcpyHostToDevice));
     // #########################################################################
 
+    float *E;
+    float *E_dev;
+
+    E = (float*)malloc(sizeof(float));
+    *E = 0.0f;
+    checkCudaErrors(cudaMalloc((void **)&E_dev, sizeof(float)));
+    checkCudaErrors(cudaMemcpy(E_dev, E, sizeof(float), cudaMemcpyHostToDevice));
+
+
+
+
+
+
     // Kernel execution
     for (int i = 0; i < niters; i++) {
         // Kernel 1 - execution
@@ -120,6 +133,9 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
         x_dev = xin_dev;
         xin_dev = xout_dev;
         xout_dev = x_dev;
+
+        // Kerne 3 - execution  (NOW  / OLD)
+        kernel3<<<blocks, threads, 1024 * sizeof(float)>>>(xout_dev, xin_dev, E_dev, npart);
     }
 
     // STOP measure time
