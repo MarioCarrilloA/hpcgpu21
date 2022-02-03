@@ -79,10 +79,7 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     printf("Blocks:%d   Threads:%d\n", total_blocks, minimum_threads);
     printf( "Executing ...\n");
 
-    // START measure time
-    //cudaEventRecord(start, 0);
-
-    // Memory management
+    // GPU memory allocations/transfers
     checkCudaErrors(cudaMalloc((void **)&xin_dev.x, sizeof(float) * npart));
     checkCudaErrors(cudaMalloc((void **)&xin_dev.y, sizeof(float) * npart));
     checkCudaErrors(cudaMalloc((void **)&xin_dev.z, sizeof(float) * npart));
@@ -96,14 +93,28 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     checkCudaErrors(cudaMemcpy(xin_dev.z, xin.z, sizeof(float) * npart, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(xin_dev.m, xin.m, sizeof(float) * npart, cudaMemcpyHostToDevice));
 
-
-
-    /// START measure time
+    // START measure time
     cudaEventRecord(start, 0);
+
+    // Stuff for kernel 2
+    // #########################################################################
+    float *F;
+    float *F_dev;
+    int M = 1000;
+
+    F = (float*)malloc(sizeof(float));
+    *F = 0.0f;
+    checkCudaErrors(cudaMalloc((void **)&F_dev, sizeof(float)));
+    checkCudaErrors(cudaMemcpy(F_dev, F, sizeof(float), cudaMemcpyHostToDevice));
+    // #########################################################################
 
     // Kernel execution
     for (int i = 0; i < niters; i++) {
+        // Kernel 1 - execution
         kernel1<<<blocks, threads, sizeof(float) * 1024 * 12>>>(xin_dev, xout_dev, npart, dt, val);
+
+        // Kernel 2 - execution
+        kernel2<<<blocks, threads, 1024 * sizeof(float)>>>(xin_dev, F_dev, npart, M);
 
         // Exchange pointers
         x_dev = xin_dev;
@@ -136,7 +147,6 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
     printf("kernel execution: %f seconds\n", (execution_time / 1000.0f));
 }
 
-
 int exercise09(int npart, int niters) {
     p xin, xout;
 
@@ -162,7 +172,6 @@ int exercise09(int npart, int niters) {
 
     return 0;
 }
-
 
 int main(int argc, char **argv) {
     int opt;

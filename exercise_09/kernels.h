@@ -11,5 +11,8 @@ struct p {
 // Kernel 1: Particle simulation exercise 4/7
 __global__ void kernel1(p xin, p xout, long int npart, double dt, double val);
 
+// Kernel 2: calculate F
+__global__ void kernel2(p xin, float *F, int npart, int M);
+
 #endif
 
