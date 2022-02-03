@@ -194,7 +194,7 @@ void execute_kernel(p xin, p xout, int npart, int niters) {
 }
 
 
-int exercise04(int npart, int niters) {
+int exercise07(int npart, int niters) {
     p xin, xout;
 
     xin.x = (float*)malloc(sizeof(float) * npart);
@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
 
     cout << "Particles: " << npart << endl;
     cout << "Iterations: " << niters << endl;
-    exercise04(npart, niters);
+    exercise07(npart, niters);
 
     return 0;
 }
