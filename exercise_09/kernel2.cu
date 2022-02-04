@@ -63,7 +63,7 @@ __global__ void kernel2(p xin, float *F, int npart, float M, float *dt, float *v
 
     // Adjust val, dt
     if (i == (npart - 1)) {
-       if (((*val) * (*dt)) < 10.0f) {
+       if (((*val) * (*dt)) >= 10.0f) {
             *dt = (*dt) * 0.1f;
         }
     }
