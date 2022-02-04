@@ -2,7 +2,10 @@
 #include <kernels.h>
 
 // F computation. Vector/Matrix multiplication
-__global__ void kernel2(p xin, float *F, int npart, float M) {
+__global__ void kernel2(p xin, float *F, int npart, float M, float *dt, float *val) {
+    int t = threadIdx.x;
+    int g = blockIdx.x;
+    int i = t + g * blockDim.x;
     extern __shared__ float psum[];
     float delta_r = 0.0f;
 
@@ -56,4 +59,12 @@ __global__ void kernel2(p xin, float *F, int npart, float M) {
     }
 
     *F = psum[threadIdx.x];
+    *val = *F;
+
+    // Adjust val, dt
+    if (i == (npart - 1)) {
+       if (((*val) * (*dt)) < 10.0f) {
+            *dt = (*dt) * 0.1f;
+        }
+    }
 }

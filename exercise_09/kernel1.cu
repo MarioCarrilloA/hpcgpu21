@@ -2,7 +2,7 @@
 #include <kernels.h>
 
 // Particle simulation exercise 4/7
-__global__ void kernel1(p xin, p xout, long int npart, double dt, double val) {
+__global__ void kernel1(p xin, p xout, long int npart, float *dt, float *val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
@@ -10,6 +10,8 @@ __global__ void kernel1(p xin, p xout, long int npart, double dt, double val) {
     int size = m * blockDim.x;
     float maxrad = 0.9f;
     float f = 0.0;
+    float dti = *dt;
+    float vali = *val;
 
     // distance vars
     float dsq;
@@ -60,7 +62,7 @@ __global__ void kernel1(p xin, p xout, long int npart, double dt, double val) {
             }
         }
 
-        float s = f * dt * val;
+        float s = f * dti * vali;
         xout.x[i] += s;
         xout.y[i] += s;
         xout.z[i] += s;
