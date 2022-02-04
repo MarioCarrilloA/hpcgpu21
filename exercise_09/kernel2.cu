@@ -2,7 +2,7 @@
 #include <kernels.h>
 
 // F computation. Vector/Matrix multiplication
-__global__ void kernel2(p xin, float *F, int npart, int M) {
+__global__ void kernel2(p xin, float *F, int npart, float M) {
     extern __shared__ float psum[];
     float delta_r = 0.0f;
 

@@ -12,7 +12,7 @@ struct p {
 __global__ void kernel1(p xin, p xout, long int npart, double dt, double val);
 
 // Kernel 2: calculate F
-__global__ void kernel2(p xin, float *F, int npart, int M);
+__global__ void kernel2(p xin, float *F, int npart, float M);
 
 // Kernel 2: calculate E
 __global__ void kernel3(p xin_now, p xin_old, float *E, int npart);
