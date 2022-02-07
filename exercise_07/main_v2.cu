@@ -7,8 +7,8 @@
 #include <helper_cuda.h>
 #include <sys/time.h>
 
-#define DEFAULT_NUM_ITERATIONS 1
-#define DEFAULT_NUM_PARTICLES  1024
+#define DEFAULT_NUM_ITERATIONS 1000
+#define DEFAULT_NUM_PARTICLES  80000
 #define DEFAULT_NUM_TO_SHOW    10
 #define MAX_THREADS_PER_BLOCK 1024
 
@@ -64,9 +64,9 @@ __global__ void kernel(p xin, p xout, long int npart, float dt, float val) {
 
     // Split shared memry
     xj_shared.x = &x_shared[0];
-    xj_shared.y = &x_shared[blockDim.x * 2];
-    xj_shared.z = &x_shared[blockDim.x * 4];
-    xj_shared.m = &x_shared[blockDim.x * 8];
+    xj_shared.y = &x_shared[blockDim.x];
+    xj_shared.z = &x_shared[blockDim.x * 2];
+    xj_shared.m = &x_shared[blockDim.x * 3];
 
     if (i < npart) {
         xout.x[i] = xin.x[i];
@@ -81,7 +81,6 @@ __global__ void kernel(p xin, p xout, long int npart, float dt, float val) {
                 int idx = ja + jl + t;
 
                 // Copy to shared memory
-                printf("Memory copy: i=%d shared[%d]=xin[%d]\n", i, jdx, idx);
                 xj_shared.x[jdx] = xin.x[idx];
                 xj_shared.y[jdx] = xin.y[idx];
                 xj_shared.z[jdx] = xin.z[idx];
