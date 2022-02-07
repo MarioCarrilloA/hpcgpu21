@@ -7,8 +7,8 @@
 #include <helper_cuda.h>
 #include <sys/time.h>
 
-#define DEFAULT_NUM_ITERATIONS 1000
-#define DEFAULT_NUM_PARTICLES  80000
+#define DEFAULT_NUM_ITERATIONS 1
+#define DEFAULT_NUM_PARTICLES  1024
 #define DEFAULT_NUM_TO_SHOW    10
 #define MAX_THREADS_PER_BLOCK 1024
 
@@ -44,11 +44,11 @@ void init(p xin, long npart) {
 }
 
 // GPU Kernel
-__global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
+__global__ void kernel(p xin, p xout, long int npart, float dt, float val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
-    int m = 2;
+    int m = 1;
     int size = m * blockDim.x;
     float maxrad = 0.9f;
     float f = 0.0;
@@ -76,11 +76,12 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
         for(int ja = 0; ja < npart; ja+=size) {
 
             // compute particles according to block size multiplier
-            for(int jl = 0; jl < size/blockDim.x; jl += blockDim.x) {
+            for(int jl = 0; jl < size/blockDim.x; jl+=blockDim.x) {
                 int jdx = jl + t;
                 int idx = ja + jl + t;
 
                 // Copy to shared memory
+                printf("Memory copy: i=%d shared[%d]=xin[%d]\n", i, jdx, idx);
                 xj_shared.x[jdx] = xin.x[idx];
                 xj_shared.y[jdx] = xin.y[idx];
                 xj_shared.z[jdx] = xin.z[idx];
@@ -88,7 +89,7 @@ __global__ void kernel(p xin, p xout, long int npart, double dt, double val) {
             }
             __syncthreads();
 
-            for(int j = ja; j < ja + size; j++){
+            for(int j = ja; j < (ja + size); j++) {
                 dstx = xin.x[t] - xj_shared.x[j - ja];
                 dsty = xin.y[t] - xj_shared.y[j - ja];
                 dstz = xin.z[t] - xj_shared.z[j - ja];
