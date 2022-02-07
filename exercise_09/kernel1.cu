@@ -6,7 +6,7 @@ __global__ void kernel1(p xin, p xout, long int npart, float *dt, float *val) {
     int t = threadIdx.x;
     int g = blockIdx.x;
     int i = t + g * blockDim.x;
-    int m = 2;
+    int m = 1;
     int size = m * blockDim.x;
     float maxrad = 0.9f;
     float f = 0.0;
@@ -24,9 +24,9 @@ __global__ void kernel1(p xin, p xout, long int npart, float *dt, float *val) {
 
     // Split shared memry
     xj_shared.x = &x_shared[0];
-    xj_shared.y = &x_shared[blockDim.x * 2];
-    xj_shared.z = &x_shared[blockDim.x * 4];
-    xj_shared.m = &x_shared[blockDim.x * 8];
+    xj_shared.y = &x_shared[blockDim.x];
+    xj_shared.z = &x_shared[blockDim.x * 2];
+    xj_shared.m = &x_shared[blockDim.x * 3];
 
     if (i < npart) {
         xout.x[i] = xin.x[i];
@@ -36,7 +36,7 @@ __global__ void kernel1(p xin, p xout, long int npart, float *dt, float *val) {
         for(int ja = 0; ja < npart; ja+=size) {
 
             // compute particles according to block size multiplier
-            for(int jl = 0; jl < size/blockDim.x; jl += blockDim.x) {
+            for(int jl = 0; jl < size/blockDim.x; jl+=blockDim.x) {
                 int jdx = jl + t;
                 int idx = ja + jl + t;
 
@@ -48,7 +48,7 @@ __global__ void kernel1(p xin, p xout, long int npart, float *dt, float *val) {
             }
             __syncthreads();
 
-            for(int j = ja; j < ja + size; j++){
+            for(int j = ja; j < (ja + size); j++){
                 dstx = xin.x[t] - xj_shared.x[j - ja];
                 dsty = xin.y[t] - xj_shared.y[j - ja];
                 dstz = xin.z[t] - xj_shared.z[j - ja];
